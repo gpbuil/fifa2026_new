@@ -14,7 +14,7 @@ const FlagImage: React.FC<{ iso2: string; name: string; size?: string }> = ({ is
   <img 
     src={`https://flagcdn.com/${iso2.toLowerCase()}.svg`} 
     alt={name}
-    className={`${size} object-cover rounded-sm shadow-sm border border-slate-200`}
+    className={`${size} object-cover rounded-sm shadow-sm border border-slate-200 shrink-0`}
   />
 );
 
@@ -23,25 +23,25 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all hover:shadow-md">
-      <div className="bg-indigo-600 px-4 py-3">
+      <div className="bg-indigo-600 px-4 py-3 flex justify-between items-center">
         <h3 className="text-lg font-bold text-white uppercase tracking-wider">Grupo {groupLetter}</h3>
       </div>
       
       <div className="p-4 flex flex-col lg:flex-row gap-6">
-        {/* Matches Section */}
-        <div className="flex-1 space-y-3">
+        {/* Matches Section - 2/3 of width */}
+        <div className="lg:flex-[2] space-y-3">
           <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jogos</h4>
           {matches.map(match => {
             const teamA = teams.find(t => t.id === match.teamA);
             const teamB = teams.find(t => t.id === match.teamB);
             return (
               <div key={match.id} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
-                <div className="flex items-center gap-3 flex-1 justify-end">
-                  <span className="text-xs font-bold text-slate-700 hidden sm:inline">{teamA?.name}</span>
+                <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
+                  <span className="text-xs font-bold text-slate-700 truncate">{teamA?.name}</span>
                   {teamA && <FlagImage iso2={teamA.iso2} name={teamA.name} size="w-7 h-5" />}
                 </div>
                 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <input
                     type="number"
                     min="0"
@@ -61,17 +61,17 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
                   />
                 </div>
 
-                <div className="flex items-center gap-3 flex-1">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   {teamB && <FlagImage iso2={teamB.iso2} name={teamB.name} size="w-7 h-5" />}
-                  <span className="text-xs font-bold text-slate-700 hidden sm:inline">{teamB?.name}</span>
+                  <span className="text-xs font-bold text-slate-700 truncate">{teamB?.name}</span>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Standings Table */}
-        <div className="lg:w-72 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+        {/* Standings Table - 1/3 of width */}
+        <div className="lg:flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
           <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Classificação</h4>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -80,32 +80,30 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
                   <th className="text-left pb-2">Seleção</th>
                   <th className="text-center pb-2">P</th>
                   <th className="text-center pb-2">SG</th>
-                  <th className="text-center pb-2">GP</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {standings.map((s, idx) => {
                   const team = teams.find(t => t.id === s.teamId);
-                  const isQualifying = idx < 2;
+                  // O indicador só fica verde se estiver no Top 2 E tiver jogado pelo menos uma vez
+                  const isQualifyingPos = idx < 2;
+                  const hasPlayed = s.played > 0;
+                  const showIndicator = isQualifyingPos && hasPlayed;
+                  
                   return (
-                    <tr key={s.teamId} className={isQualifying ? "bg-white/50" : ""}>
-                      <td className="py-3 flex items-center gap-2">
-                        <span className={`w-1.5 h-1.5 rounded-full ${isQualifying ? "bg-green-500" : "bg-slate-300"}`}></span>
+                    <tr key={s.teamId} className={showIndicator ? "bg-white/50" : ""}>
+                      <td className="py-2.5 flex items-center gap-2 min-w-0">
+                        <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${showIndicator ? "bg-green-500" : "bg-slate-300"}`}></span>
                         {team && <FlagImage iso2={team.iso2} name={team.name} size="w-5 h-3.5" />}
-                        <span className={`font-bold ${isQualifying ? "text-slate-900" : "text-slate-500"}`}>{team?.id}</span>
+                        <span className={`font-bold truncate ${showIndicator ? "text-slate-900" : "text-slate-500"}`}>{team?.name}</span>
                       </td>
                       <td className="text-center font-black text-indigo-600">{s.points}</td>
                       <td className="text-center text-slate-600 font-medium">{s.goalsDifference}</td>
-                      <td className="text-center text-slate-400">{s.goalsFor}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[9px] font-bold uppercase tracking-tight text-slate-400">
-            <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500"></span> Classificado</div>
-            <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-300"></span> Eliminado</div>
           </div>
         </div>
       </div>

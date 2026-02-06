@@ -14,6 +14,7 @@ export interface Match {
   teamB: string;
   scoreA?: number | null;
   scoreB?: number | null;
+  venue?: string; // Sede do jogo
 }
 
 export interface GroupStanding {

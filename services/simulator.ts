@@ -68,17 +68,22 @@ export const getAdvancedTeams = (groups: string[], allTeams: Team[], allMatches:
     const groupMatches = allMatches.filter(m => m.group === groupLetter);
     const standings = calculateGroupStandings(groupTeams, groupMatches);
 
-    const winner = allTeams.find(t => t.id === standings[0].teamId);
-    const runnerUp = allTeams.find(t => t.id === standings[1].teamId);
-    const thirdPlace = allTeams.find(t => t.id === standings[2].teamId);
+    // Só avança times se pelo menos UM jogo foi disputado no grupo
+    const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
+    
+    if (hasAnyMatch) {
+      const winner = allTeams.find(t => t.id === standings[0].teamId);
+      const runnerUp = allTeams.find(t => t.id === standings[1].teamId);
+      const thirdPlace = allTeams.find(t => t.id === standings[2].teamId);
 
-    if (winner) winners.push(winner);
-    if (runnerUp) runnersUp.push(runnerUp);
-    if (thirdPlace) thirdPlaces.push({ team: thirdPlace, standing: standings[2] });
+      if (winner && standings[0].played > 0) winners.push(winner);
+      if (runnerUp && standings[1].played > 0) runnersUp.push(runnerUp);
+      if (thirdPlace && standings[2].played > 0) thirdPlaces.push({ team: thirdPlace, standing: standings[2] });
+    }
   });
 
-  // Top 8 third places
-  const bestThirdPlaces = thirdPlaces
+  // Melhores 8 terceiros
+  const sortedThirdPlaces = thirdPlaces
     .sort((a, b) => {
       if (b.standing.points !== a.standing.points) return b.standing.points - a.standing.points;
       if (b.standing.goalsDifference !== a.standing.goalsDifference) return b.standing.goalsDifference - a.standing.goalsDifference;
@@ -87,5 +92,5 @@ export const getAdvancedTeams = (groups: string[], allTeams: Team[], allMatches:
     .slice(0, 8)
     .map(tp => tp.team);
 
-  return { winners, runnersUp, bestThirdPlaces };
+  return { winners, runnersUp, bestThirdPlaces: sortedThirdPlaces };
 };
