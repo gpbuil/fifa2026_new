@@ -3,6 +3,7 @@ export interface Team {
   id: string;
   name: string;
   flag: string;
+  iso2: string; // Código ISO alpha-2 para bandeiras SVG
   group: string;
 }
 
