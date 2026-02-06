@@ -1,0 +1,5 @@
+{
+  "name": "Copa 2026 Simulator",
+  "description": "A comprehensive World Cup 2026 simulator with group stage calculations, best third-placed logic, and knockout brackets, powered by Supabase for real-time predictions.",
+  "requestFramePermissions": []
+}
