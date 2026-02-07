@@ -58,7 +58,6 @@ const App: React.FC = () => {
   const fetchPredictions = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase.from('predictions').select('*').eq('user_id', userId);
-      
       if (error) {
         if (error.code === 'PGRST205' || error.status === 404) {
           setMatches(initMatches());
@@ -66,19 +65,15 @@ const App: React.FC = () => {
         }
         throw error;
       }
-      
       const groupBase = initMatches();
       const scores: Record<string, {a: number | null, b: number | null}> = {};
-
       const updatedGroup = groupBase.map(m => {
         const p = data?.find((pred: any) => pred.match_id === m.id);
         return p ? { ...m, scoreA: p.score_a, scoreB: p.score_b } : m;
       });
-
       data?.filter((p: any) => p.match_id.length <= 3).forEach((p: any) => {
         scores[p.match_id] = { a: p.score_a, b: p.score_b };
       });
-
       setMatches(updatedGroup);
       setKnockoutScores(scores);
     } catch (e) { 
@@ -87,11 +82,10 @@ const App: React.FC = () => {
   }, [initMatches]);
 
   useEffect(() => {
-    // Detecta modo de recuperação imediatamente
-    const hasRecovery = window.location.hash.includes('type=recovery') || 
-                        window.location.hash.includes('access_token=');
-    
-    if (hasRecovery) {
+    // Verificação instantânea do modo de recuperação na URL
+    const hash = window.location.hash;
+    const isRecovery = hash.includes('type=recovery') || hash.includes('access_token=');
+    if (isRecovery) {
       setIsResettingPassword(true);
     }
 
@@ -109,9 +103,8 @@ const App: React.FC = () => {
       if (event === 'SIGNED_IN') {
         setSession(session);
         if (session) fetchPredictions(session.user.id);
-        // Só desativa o reset se não houver indícios de recuperação na URL
-        const stillRecovering = window.location.hash.includes('type=recovery');
-        if (!stillRecovering) {
+        // Só encerra o modo de redefinição se o usuário já não estiver nele
+        if (!window.location.hash.includes('type=recovery')) {
           setIsResettingPassword(false);
         }
       }
@@ -143,12 +136,10 @@ const App: React.FC = () => {
 
   const knockoutMatches = useMemo(() => {
     const k: Match[] = [];
-
     R32_STRUCTURE.forEach(struct => {
       const score = knockoutScores[struct.id] || { a: null, b: null };
       k.push({ id: struct.id, group: 'KO', teamA: struct.a, teamB: struct.b, scoreA: score.a, scoreB: score.b, venue: struct.venue });
     });
-
     const r16Map = [
       { id: '89', wA: '74', wB: '77', v: 'Philadelphia' }, { id: '90', wA: '73', wB: '75', v: 'Houston' },
       { id: '91', wA: '76', wB: '78', v: 'New York/NJ' }, { id: '92', wA: '79', wB: '80', v: 'Mexico City' },
@@ -164,7 +155,6 @@ const App: React.FC = () => {
       if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = (matchB.scoreA || 0) > (matchB.scoreB || 0) ? matchB.teamA : matchB.teamB;
       k.push({ id: map.id, group: 'KO', teamA, teamB, scoreA: score.a, scoreB: score.b, venue: map.v });
     });
-
     const qfMap = [
       { id: '97', wA: '89', wB: '90', v: 'Boston' }, { id: '98', wA: '93', wB: '94', v: 'Los Angeles' },
       { id: '99', wA: '91', wB: '92', v: 'Miami' }, { id: '100', wA: '95', wB: '96', v: 'Kansas City' }
@@ -178,7 +168,6 @@ const App: React.FC = () => {
       if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = (matchB.scoreA || 0) > (matchB.scoreB || 0) ? matchB.teamA : matchB.teamB;
       k.push({ id: map.id, group: 'KO', teamA, teamB, scoreA: score.a, scoreB: score.b, venue: map.v });
     });
-
     const sfMap = [{ id: '101', wA: '97', wB: '98', v: 'Dallas' }, { id: '102', wA: '99', wB: '100', v: 'Atlanta' }];
     sfMap.forEach(map => {
       const score = knockoutScores[map.id] || { a: null, b: null };
@@ -189,7 +178,6 @@ const App: React.FC = () => {
       if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = (matchB.scoreA || 0) > (matchB.scoreB || 0) ? matchB.teamA : matchB.teamB;
       k.push({ id: map.id, group: 'KO', teamA, teamB, scoreA: score.a, scoreB: score.b, venue: map.v });
     });
-
     const score3 = knockoutScores['103'] || { a: null, b: null };
     const sf1 = k.find(m => m.id === '101');
     const sf2 = k.find(m => m.id === '102');
@@ -197,13 +185,11 @@ const App: React.FC = () => {
     if (sf1?.scoreA !== null && sf1?.scoreB !== null) teamA3 = (sf1.scoreA || 0) > (sf1.scoreB || 0) ? sf1.teamB : sf1.teamA;
     if (sf2?.scoreA !== null && sf2?.scoreB !== null) teamB3 = (sf2.scoreA || 0) > (sf2.scoreB || 0) ? sf2.teamB : sf2.teamA;
     k.push({ id: '103', group: 'KO', teamA: teamA3, teamB: teamB3, scoreA: score3.a, scoreB: score3.b, venue: 'Miami' });
-
     const scoreF = knockoutScores['104'] || { a: null, b: null };
     let teamAF = 'Venc. 101', teamBF = 'Venc. 102';
     if (sf1?.scoreA !== null && sf1?.scoreB !== null) teamAF = (sf1.scoreA || 0) > (sf1.scoreB || 0) ? sf1.teamA : sf1.teamB;
     if (sf2?.scoreA !== null && sf2?.scoreB !== null) teamBF = (sf2.scoreA || 0) > (sf2.scoreB || 0) ? sf2.teamA : sf2.teamB;
     k.push({ id: '104', group: 'KO', teamA: teamAF, teamB: teamBF, scoreA: scoreF.a, scoreB: scoreF.b, venue: 'New York/NJ' });
-
     return k;
   }, [knockoutScores, R32_STRUCTURE]);
 
@@ -212,9 +198,7 @@ const App: React.FC = () => {
       const team = TEAMS_DATA.find(t => t.id === id);
       return { team, label: team?.name || id };
     }
-
     const advanced = getAdvancedTeams(GROUPS, TEAMS_DATA, matches);
-
     if (id.startsWith('3rd-')) {
       const parts = id.split('-');
       const rankIdx = parseInt(parts[1]) - 1;
@@ -222,7 +206,6 @@ const App: React.FC = () => {
       if (team) return { team, label: team.name };
       return { label: `${rankIdx + 1}º Melhor 3º` };
     }
-
     if (/^[123][A-L]$/.test(id)) {
       const pos = parseInt(id[0]);
       const grp = id[1];
@@ -236,7 +219,6 @@ const App: React.FC = () => {
       }
       return { label: `${id[0]}º Grupo ${id[1]}` };
     }
-
     return { label: id };
   }, [matches]);
 
@@ -264,10 +246,7 @@ const App: React.FC = () => {
   const userInfo = useMemo(() => {
     const meta = session?.user?.user_metadata;
     if (!meta) return null;
-    return {
-      firstName: meta.full_name?.split(' ')[0] || 'Usuário',
-      phone: meta.phone || ''
-    };
+    return { firstName: meta.full_name?.split(' ')[0] || 'Usuário', phone: meta.phone || '' };
   }, [session]);
 
   if (loading) return (
@@ -292,7 +271,6 @@ const App: React.FC = () => {
               {userInfo && (
                 <div className="flex items-center gap-1.5 mt-0.5">
                    <span className="text-[9px] font-bold text-slate-400 uppercase leading-none">Olá, {userInfo.firstName}!</span>
-                   {userInfo.phone && <span className="text-[8px] px-1 bg-slate-100 text-slate-500 rounded font-mono">{userInfo.phone}</span>}
                 </div>
               )}
             </div>
@@ -304,13 +282,11 @@ const App: React.FC = () => {
           <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
         </div>
       </nav>
-
       <main className="max-w-[1600px] mx-auto px-4 py-8">
         {view === ViewMode.GROUPS ? (
           <div className="space-y-8">
             <header>
               <h1 className="text-4xl font-black text-slate-900 tracking-tight">Fase de Grupos</h1>
-              <p className="text-slate-500 font-medium">Os 2 melhores de cada grupo + 8 melhores terceiros avançam.</p>
             </header>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
               {GROUPS.map(g => (
@@ -322,14 +298,8 @@ const App: React.FC = () => {
           <div className="space-y-10">
             <header>
               <h1 className="text-4xl font-black text-slate-900 tracking-tight">Chaveamento Final</h1>
-              <p className="text-slate-500 font-medium">Da fase de 32 avos até a grande final em New York.</p>
             </header>
-            <KnockoutBracket 
-              allTeams={TEAMS_DATA}
-              knockoutMatches={knockoutMatches} 
-              onScoreChange={handleScoreChange}
-              resolvePlaceholder={resolvePlaceholder}
-            />
+            <KnockoutBracket allTeams={TEAMS_DATA} knockoutMatches={knockoutMatches} onScoreChange={handleScoreChange} resolvePlaceholder={resolvePlaceholder} />
           </div>
         )}
       </main>
