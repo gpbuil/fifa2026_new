@@ -58,52 +58,59 @@ const TeamRow: React.FC<{
 
 const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onScoreChange, resolvePlaceholder }) => {
   const rounds = [
-    { title: "32 Avos", id: "R32", matches: knockoutMatches.filter(m => parseInt(m.id) >= 73 && parseInt(m.id) <= 88) },
-    { title: "Oitavas", id: "R16", matches: knockoutMatches.filter(m => parseInt(m.id) >= 89 && parseInt(m.id) <= 96) },
+    { title: "Rodada de 32", id: "R32", matches: knockoutMatches.filter(m => parseInt(m.id) >= 73 && parseInt(m.id) <= 88) },
+    { title: "Rodada de 16", id: "R16", matches: knockoutMatches.filter(m => parseInt(m.id) >= 89 && parseInt(m.id) <= 96) },
     { title: "Quartas", id: "QF", matches: knockoutMatches.filter(m => parseInt(m.id) >= 97 && parseInt(m.id) <= 100) },
     { title: "Semis", id: "SF", matches: knockoutMatches.filter(m => m.id === '101' || m.id === '102') },
     { title: "Finais", id: "F", matches: knockoutMatches.filter(m => m.id === '103' || m.id === '104') }
   ];
 
   return (
-    <div className="overflow-x-auto pb-12 cursor-grab active:cursor-grabbing scrollbar-hide">
-      <div className="flex gap-10 min-w-max px-4">
-        {rounds.map((round) => (
-          <div key={round.id} className="flex flex-col gap-8 w-64">
-            <h3 className="text-center font-black text-indigo-900 uppercase tracking-widest text-[11px] py-2.5 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-sm">
-              {round.title}
-            </h3>
-            <div className="flex flex-col justify-around flex-1 gap-6">
-              {round.matches.sort((a, b) => parseInt(a.id) - parseInt(b.id)).map((m) => (
-                <div key={m.id} className={`bg-white rounded-2xl border ${m.id === '104' ? 'border-amber-400 shadow-amber-100' : 'border-slate-200'} shadow-sm overflow-hidden hover:shadow-md transition-all`}>
-                  <div className={`${m.id === '104' ? 'bg-amber-50' : m.id === '103' ? 'bg-orange-50' : 'bg-slate-50'} px-3 py-1.5 border-b border-slate-100 flex justify-between items-center`}>
-                    <div className="flex flex-col">
-                      <span className={`text-[9px] font-black ${m.id === '104' ? 'text-amber-600' : m.id === '103' ? 'text-orange-600' : 'text-indigo-600'} uppercase`}>
-                        {m.id === '104' ? 'GRANDE FINAL' : m.id === '103' ? 'DISPUTA 3º LUGAR' : `JOGO ${m.id}`}
-                      </span>
+    <div className="relative">
+      <div className="overflow-x-auto pb-12 cursor-grab active:cursor-grabbing custom-scrollbar">
+        <div className="flex gap-10 min-w-max px-4">
+          {rounds.map((round) => (
+            <div key={round.id} className="flex flex-col gap-8 w-64">
+              <h3 className="text-center font-black text-indigo-900 uppercase tracking-widest text-[11px] py-2.5 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-sm">
+                {round.title}
+              </h3>
+              <div className="flex flex-col justify-around flex-1 gap-6">
+                {round.matches.sort((a, b) => parseInt(a.id) - parseInt(b.id)).map((m) => (
+                  <div key={m.id} className={`bg-white rounded-2xl border ${m.id === '104' ? 'border-amber-400 shadow-amber-100' : 'border-slate-200'} shadow-sm overflow-hidden hover:shadow-md transition-all`}>
+                    <div className={`${m.id === '104' ? 'bg-amber-50' : m.id === '103' ? 'bg-orange-50' : 'bg-slate-50'} px-3 py-1.5 border-b border-slate-100 flex justify-between items-center`}>
+                      <div className="flex flex-col">
+                        <span className={`text-[9px] font-black ${m.id === '104' ? 'text-amber-600' : m.id === '103' ? 'text-orange-600' : 'text-indigo-600'} uppercase`}>
+                          {m.id === '104' ? 'GRANDE FINAL' : m.id === '103' ? 'DISPUTA 3º LUGAR' : `JOGO ${m.id}`}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-400 truncate max-w-[100px]">{m.venue}</span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-400 truncate max-w-[100px]">{m.venue}</span>
+                    <div className="p-1 space-y-0.5">
+                      <TeamRow 
+                        teamId={m.teamA} 
+                        score={m.scoreA} 
+                        onScoreChange={(val) => onScoreChange(m.id, 'A', val)}
+                        resolve={resolvePlaceholder}
+                      />
+                      <div className="h-px bg-slate-50 mx-2"></div>
+                      <TeamRow 
+                        teamId={m.teamB} 
+                        score={m.scoreB} 
+                        onScoreChange={(val) => onScoreChange(m.id, 'B', val)}
+                        resolve={resolvePlaceholder}
+                      />
+                    </div>
                   </div>
-                  <div className="p-1 space-y-0.5">
-                    <TeamRow 
-                      teamId={m.teamA} 
-                      score={m.scoreA} 
-                      onScoreChange={(val) => onScoreChange(m.id, 'A', val)}
-                      resolve={resolvePlaceholder}
-                    />
-                    <div className="h-px bg-slate-50 mx-2"></div>
-                    <TeamRow 
-                      teamId={m.teamB} 
-                      score={m.scoreB} 
-                      onScoreChange={(val) => onScoreChange(m.id, 'B', val)}
-                      resolve={resolvePlaceholder}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+      </div>
+      
+      {/* Indicador visual de scroll para ajudar na orientação */}
+      <div className="absolute right-0 bottom-4 bg-indigo-600 text-white text-[10px] font-bold py-1.5 px-3 rounded-l-full shadow-lg animate-pulse pointer-events-none xl:hidden">
+        Deslize para ver as finais →
       </div>
     </div>
   );

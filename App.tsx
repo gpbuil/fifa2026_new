@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [knockoutScores, setKnockoutScores] = useState<Record<string, {a: number | null, b: number | null}>>({});
   const [loading, setLoading] = useState(true);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const initMatches = useCallback(() => {
     const initialMatches: Match[] = [];
@@ -60,7 +61,6 @@ const App: React.FC = () => {
       
       if (error) {
         if (error.code === 'PGRST205' || error.status === 404) {
-          console.warn("Dica: Crie a tabela 'predictions' no Supabase via SQL Editor para salvar seus palpites.");
           setMatches(initMatches());
           return;
         }
@@ -82,29 +82,40 @@ const App: React.FC = () => {
       setMatches(updatedGroup);
       setKnockoutScores(scores);
     } catch (e) { 
-      console.error("Erro ao carregar predições:", e);
       setMatches(initMatches());
     }
   }, [initMatches]);
 
   useEffect(() => {
+    // Detecta modo de recuperação logo no início
+    if (window.location.hash && window.location.hash.includes('type=recovery')) {
+      setIsResettingPassword(true);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
-        fetchPredictions(session.user.id);
-      } else {
-        setMatches(initMatches());
-      }
+      if (session) fetchPredictions(session.user.id);
+      else setMatches(initMatches());
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        fetchPredictions(session.user.id);
-      } else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResettingPassword(true);
+      }
+      if (event === 'SIGNED_IN') {
+        setSession(session);
+        if (session) fetchPredictions(session.user.id);
+        // Só desliga o reset se não estivermos no meio dele
+        if (!window.location.hash.includes('type=recovery')) {
+          setIsResettingPassword(false);
+        }
+      }
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
         setMatches(initMatches());
         setKnockoutScores({});
+        setIsResettingPassword(false);
       }
     });
 
@@ -114,15 +125,13 @@ const App: React.FC = () => {
   const savePrediction = async (matchId: string, scoreA: number, scoreB: number) => {
     if (!session?.user?.id) return;
     try {
-      const { error } = await supabase.from('predictions').upsert({
+      await supabase.from('predictions').upsert({
         user_id: session.user.id, 
         match_id: matchId, 
         score_a: scoreA, 
         score_b: scoreB, 
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,match_id' });
-      
-      if (error) throw error;
     } catch (e) {
       console.error("Erro ao salvar palpite:", e);
     }
@@ -205,10 +214,9 @@ const App: React.FC = () => {
     if (id.startsWith('3rd-')) {
       const parts = id.split('-');
       const rankIdx = parseInt(parts[1]) - 1;
-      const groupHint = parts[2] || '';
       const team = advanced.bestThirdPlaces[rankIdx];
       if (team) return { team, label: team.name };
-      return { label: `${rankIdx + 1}º Melhor 3º (${groupHint})` };
+      return { label: `${rankIdx + 1}º Melhor 3º` };
     }
 
     if (/^[123][A-L]$/.test(id)) {
@@ -222,8 +230,7 @@ const App: React.FC = () => {
         const team = TEAMS_DATA.find(t => t.id === standings[pos-1].teamId);
         if (team) return { team, label: team.name };
       }
-      const labels: Record<string, string> = { '1': '1º', '2': '2º', '3': '3º' };
-      return { label: `${labels[id[0]]} Grupo ${id[1]}` };
+      return { label: `${id[0]}º Grupo ${id[1]}` };
     }
 
     return { label: id };
@@ -250,7 +257,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Dados do usuário (nome e telefone) do metadata
   const userInfo = useMemo(() => {
     const meta = session?.user?.user_metadata;
     if (!meta) return null;
@@ -261,12 +267,12 @@ const App: React.FC = () => {
   }, [session]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-indigo-600"></div></div>;
-  if (!session) return <Auth />;
+  if (!session || isResettingPassword) return <Auth />;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <nav className="sticky top-0 z-50 glass border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">⚽</span>
             <div className="flex flex-col">
@@ -287,7 +293,7 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-[1600px] mx-auto px-4 py-8">
         {view === ViewMode.GROUPS ? (
           <div className="space-y-8">
             <header>
