@@ -87,8 +87,11 @@ const App: React.FC = () => {
   }, [initMatches]);
 
   useEffect(() => {
-    // Detecta modo de recuperação logo no início
-    if (window.location.hash && window.location.hash.includes('type=recovery')) {
+    // Detecta modo de recuperação imediatamente
+    const hasRecovery = window.location.hash.includes('type=recovery') || 
+                        window.location.hash.includes('access_token=');
+    
+    if (hasRecovery) {
       setIsResettingPassword(true);
     }
 
@@ -106,8 +109,9 @@ const App: React.FC = () => {
       if (event === 'SIGNED_IN') {
         setSession(session);
         if (session) fetchPredictions(session.user.id);
-        // Só desliga o reset se não estivermos no meio dele
-        if (!window.location.hash.includes('type=recovery')) {
+        // Só desativa o reset se não houver indícios de recuperação na URL
+        const stillRecovering = window.location.hash.includes('type=recovery');
+        if (!stillRecovering) {
           setIsResettingPassword(false);
         }
       }
@@ -266,7 +270,15 @@ const App: React.FC = () => {
     };
   }, [session]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-indigo-600"></div></div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-indigo-600"></div>
+        <span className="text-slate-400 font-bold text-xs uppercase tracking-widest">Carregando Simulator...</span>
+      </div>
+    </div>
+  );
+  
   if (!session || isResettingPassword) return <Auth />;
 
   return (
