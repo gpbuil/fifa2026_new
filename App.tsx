@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from './supabase';
 import { TEAMS_DATA, GROUPS } from './data/teams';
-import { Match, ViewMode, Prediction, Team } from './types';
+import { Match, ViewMode, Team } from './types';
 import Auth from './components/Auth';
 import GroupCard from './components/GroupCard';
 import KnockoutBracket from './components/KnockoutBracket';
@@ -35,7 +35,6 @@ const App: React.FC = () => {
     return initialMatches;
   }, []);
 
-  // Estrutura com mapeamento exato de grupos para os 3º colocados
   const R32_STRUCTURE = useMemo(() => [
     { id: '73', a: '2A', b: '2B', venue: 'Los Angeles' },
     { id: '74', a: '1E', b: '3rd-1-A/B/C/D/F', venue: 'Boston' },
@@ -55,26 +54,18 @@ const App: React.FC = () => {
     { id: '88', a: '2D', b: '2G', venue: 'Dallas' }
   ], []);
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error && error.message.includes('Refresh Token Not Found')) await supabase.auth.signOut();
-        setSession(session);
-        if (session) fetchPredictions(session.user.id);
-      } catch (e) { console.error(e); } 
-      finally { 
-        setMatches(initMatches());
-        setLoading(false);
-      }
-    };
-    initializeAuth();
-  }, [initMatches]);
-
-  const fetchPredictions = async (userId: string) => {
+  const fetchPredictions = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase.from('predictions').select('*').eq('user_id', userId);
-      if (error) throw error;
+      
+      if (error) {
+        if (error.code === 'PGRST205' || error.status === 404) {
+          console.warn("Dica: Crie a tabela 'predictions' no Supabase via SQL Editor para salvar seus palpites.");
+          setMatches(initMatches());
+          return;
+        }
+        throw error;
+      }
       
       const groupBase = initMatches();
       const scores: Record<string, {a: number | null, b: number | null}> = {};
@@ -90,26 +81,61 @@ const App: React.FC = () => {
 
       setMatches(updatedGroup);
       setKnockoutScores(scores);
-    } catch (e) { console.error(e); }
-  };
+    } catch (e) { 
+      console.error("Erro ao carregar predições:", e);
+      setMatches(initMatches());
+    }
+  }, [initMatches]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        fetchPredictions(session.user.id);
+      } else {
+        setMatches(initMatches());
+      }
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        fetchPredictions(session.user.id);
+      } else {
+        setMatches(initMatches());
+        setKnockoutScores({});
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [initMatches, fetchPredictions]);
 
   const savePrediction = async (matchId: string, scoreA: number, scoreB: number) => {
     if (!session?.user?.id) return;
-    await supabase.from('predictions').upsert({
-      user_id: session.user.id, match_id: matchId, score_a: scoreA, score_b: scoreB, updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,match_id' });
+    try {
+      const { error } = await supabase.from('predictions').upsert({
+        user_id: session.user.id, 
+        match_id: matchId, 
+        score_a: scoreA, 
+        score_b: scoreB, 
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,match_id' });
+      
+      if (error) throw error;
+    } catch (e) {
+      console.error("Erro ao salvar palpite:", e);
+    }
   };
 
   const knockoutMatches = useMemo(() => {
     const k: Match[] = [];
 
-    // 1. Round of 32
     R32_STRUCTURE.forEach(struct => {
       const score = knockoutScores[struct.id] || { a: null, b: null };
       k.push({ id: struct.id, group: 'KO', teamA: struct.a, teamB: struct.b, scoreA: score.a, scoreB: score.b, venue: struct.venue });
     });
 
-    // 2. Round of 16
     const r16Map = [
       { id: '89', wA: '74', wB: '77', v: 'Philadelphia' }, { id: '90', wA: '73', wB: '75', v: 'Houston' },
       { id: '91', wA: '76', wB: '78', v: 'New York/NJ' }, { id: '92', wA: '79', wB: '80', v: 'Mexico City' },
@@ -121,12 +147,11 @@ const App: React.FC = () => {
       const matchA = k.find(m => m.id === map.wA);
       const matchB = k.find(m => m.id === map.wB);
       let teamA = `Venc. ${map.wA}`, teamB = `Venc. ${map.wB}`;
-      if (matchA?.scoreA !== null && matchA?.scoreB !== null) teamA = matchA.scoreA > matchA.scoreB ? matchA.teamA : matchA.teamB;
-      if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = matchB.scoreA > matchB.scoreB ? matchB.teamA : matchB.teamB;
+      if (matchA?.scoreA !== null && matchA?.scoreB !== null) teamA = (matchA.scoreA || 0) > (matchA.scoreB || 0) ? matchA.teamA : matchA.teamB;
+      if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = (matchB.scoreA || 0) > (matchB.scoreB || 0) ? matchB.teamA : matchB.teamB;
       k.push({ id: map.id, group: 'KO', teamA, teamB, scoreA: score.a, scoreB: score.b, venue: map.v });
     });
 
-    // 3. Quarter Finals
     const qfMap = [
       { id: '97', wA: '89', wB: '90', v: 'Boston' }, { id: '98', wA: '93', wB: '94', v: 'Los Angeles' },
       { id: '99', wA: '91', wB: '92', v: 'Miami' }, { id: '100', wA: '95', wB: '96', v: 'Kansas City' }
@@ -136,37 +161,34 @@ const App: React.FC = () => {
       const matchA = k.find(m => m.id === map.wA);
       const matchB = k.find(m => m.id === map.wB);
       let teamA = `Venc. ${map.wA}`, teamB = `Venc. ${map.wB}`;
-      if (matchA?.scoreA !== null && matchA?.scoreB !== null) teamA = matchA.scoreA > matchA.scoreB ? matchA.teamA : matchA.teamB;
-      if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = matchB.scoreA > matchB.scoreB ? matchB.teamA : matchB.teamB;
+      if (matchA?.scoreA !== null && matchA?.scoreB !== null) teamA = (matchA.scoreA || 0) > (matchA.scoreB || 0) ? matchA.teamA : matchA.teamB;
+      if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = (matchB.scoreA || 0) > (matchB.scoreB || 0) ? matchB.teamA : matchB.teamB;
       k.push({ id: map.id, group: 'KO', teamA, teamB, scoreA: score.a, scoreB: score.b, venue: map.v });
     });
 
-    // 4. Semis
     const sfMap = [{ id: '101', wA: '97', wB: '98', v: 'Dallas' }, { id: '102', wA: '99', wB: '100', v: 'Atlanta' }];
     sfMap.forEach(map => {
       const score = knockoutScores[map.id] || { a: null, b: null };
       const matchA = k.find(m => m.id === map.wA);
       const matchB = k.find(m => m.id === map.wB);
       let teamA = `Venc. ${map.wA}`, teamB = `Venc. ${map.wB}`;
-      if (matchA?.scoreA !== null && matchA?.scoreB !== null) teamA = matchA.scoreA > matchA.scoreB ? matchA.teamA : matchA.teamB;
-      if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = matchB.scoreA > matchB.scoreB ? matchB.teamA : matchB.teamB;
+      if (matchA?.scoreA !== null && matchA?.scoreB !== null) teamA = (matchA.scoreA || 0) > (matchA.scoreB || 0) ? matchA.teamA : matchA.teamB;
+      if (matchB?.scoreA !== null && matchB?.scoreB !== null) teamB = (matchB.scoreA || 0) > (matchB.scoreB || 0) ? matchB.teamA : matchB.teamB;
       k.push({ id: map.id, group: 'KO', teamA, teamB, scoreA: score.a, scoreB: score.b, venue: map.v });
     });
 
-    // 5. 3rd Place (103)
     const score3 = knockoutScores['103'] || { a: null, b: null };
     const sf1 = k.find(m => m.id === '101');
     const sf2 = k.find(m => m.id === '102');
     let teamA3 = 'Perd. 101', teamB3 = 'Perd. 102';
-    if (sf1?.scoreA !== null && sf1?.scoreB !== null) teamA3 = sf1.scoreA > sf1.scoreB ? sf1.teamB : sf1.teamA;
-    if (sf2?.scoreA !== null && sf2?.scoreB !== null) teamB3 = sf2.scoreA > sf2.scoreB ? sf2.teamB : sf2.teamA;
+    if (sf1?.scoreA !== null && sf1?.scoreB !== null) teamA3 = (sf1.scoreA || 0) > (sf1.scoreB || 0) ? sf1.teamB : sf1.teamA;
+    if (sf2?.scoreA !== null && sf2?.scoreB !== null) teamB3 = (sf2.scoreA || 0) > (sf2.scoreB || 0) ? sf2.teamB : sf2.teamA;
     k.push({ id: '103', group: 'KO', teamA: teamA3, teamB: teamB3, scoreA: score3.a, scoreB: score3.b, venue: 'Miami' });
 
-    // 6. Final (104)
     const scoreF = knockoutScores['104'] || { a: null, b: null };
     let teamAF = 'Venc. 101', teamBF = 'Venc. 102';
-    if (sf1?.scoreA !== null && sf1?.scoreB !== null) teamAF = sf1.scoreA > sf1.scoreB ? sf1.teamA : sf1.teamB;
-    if (sf2?.scoreA !== null && sf2?.scoreB !== null) teamBF = sf2.scoreA > sf2.scoreB ? sf2.teamA : sf2.teamB;
+    if (sf1?.scoreA !== null && sf1?.scoreB !== null) teamAF = (sf1.scoreA || 0) > (sf1.scoreB || 0) ? sf1.teamA : sf1.teamB;
+    if (sf2?.scoreA !== null && sf2?.scoreB !== null) teamBF = (sf2.scoreA || 0) > (sf2.scoreB || 0) ? sf2.teamA : sf2.teamB;
     k.push({ id: '104', group: 'KO', teamA: teamAF, teamB: teamBF, scoreA: scoreF.a, scoreB: scoreF.b, venue: 'New York/NJ' });
 
     return k;
@@ -185,7 +207,6 @@ const App: React.FC = () => {
       const rankIdx = parseInt(parts[1]) - 1;
       const groupHint = parts[2] || '';
       const team = advanced.bestThirdPlaces[rankIdx];
-      
       if (team) return { team, label: team.name };
       return { label: `${rankIdx + 1}º Melhor 3º (${groupHint})` };
     }
@@ -205,7 +226,7 @@ const App: React.FC = () => {
       return { label: `${labels[id[0]]} Grupo ${id[1]}` };
     }
 
-    return { label: id.startsWith('Venc.') || id.startsWith('Perd.') ? id : id };
+    return { label: id };
   }, [matches]);
 
   const handleScoreChange = (matchId: string, team: 'A' | 'B', value: string) => {
@@ -229,6 +250,16 @@ const App: React.FC = () => {
     }
   };
 
+  // Dados do usuário (nome e telefone) do metadata
+  const userInfo = useMemo(() => {
+    const meta = session?.user?.user_metadata;
+    if (!meta) return null;
+    return {
+      firstName: meta.full_name?.split(' ')[0] || 'Usuário',
+      phone: meta.phone || ''
+    };
+  }, [session]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-indigo-600"></div></div>;
   if (!session) return <Auth />;
 
@@ -238,7 +269,15 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">⚽</span>
-            <span className="font-black text-xl text-indigo-900 tracking-tighter">COPA2026</span>
+            <div className="flex flex-col">
+              <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026</span>
+              {userInfo && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                   <span className="text-[9px] font-bold text-slate-400 uppercase leading-none">Olá, {userInfo.firstName}!</span>
+                   {userInfo.phone && <span className="text-[8px] px-1 bg-slate-100 text-slate-500 rounded font-mono">{userInfo.phone}</span>}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setView(ViewMode.GROUPS)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>

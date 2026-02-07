@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bolão - Copa 2026</title>
   <script>
-    // Correção para o erro 'requires TrustedScript assignment'
+    // Correção robusta para Trusted Types
     if (window.trustedTypes && window.trustedTypes.createPolicy) {
       if (!window.trustedTypes.defaultPolicy) {
         window.trustedTypes.createPolicy('default', {
@@ -30,6 +30,9 @@
       -webkit-appearance: none; 
       margin: 0; 
     }
+    /* Esconder scrollbar mantendo funcionalidade */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 <script type="importmap">
 {
@@ -38,7 +41,7 @@
     "react/": "https://esm.sh/react@^19.2.4/",
     "react-dom": "https://esm.sh/react-dom@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.95.3"
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0"
   }
 }
 </script>

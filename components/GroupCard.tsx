@@ -35,12 +35,16 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
             const teamA = teams.find(t => t.id === match.teamA);
             const teamB = teams.find(t => t.id === match.teamB);
             return (
-              <div key={match.id} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
-                <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-                  <span className="text-xs font-bold text-slate-700 truncate">{teamA?.name}</span>
+              <div key={match.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors min-h-[72px]">
+                {/* Team A - Right Aligned */}
+                <div className="flex items-center gap-2.5 flex-1 justify-end min-w-0">
+                  <span className="text-xs font-bold text-slate-700 leading-tight text-right">
+                    {teamA?.name}
+                  </span>
                   {teamA && <FlagImage iso2={teamA.iso2} name={teamA.name} size="w-7 h-5" />}
                 </div>
                 
+                {/* Score Inputs */}
                 <div className="flex items-center gap-1.5 shrink-0">
                   <input
                     type="number"
@@ -50,7 +54,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
                     onChange={(e) => onScoreChange(match.id, 'A', e.target.value)}
                     className="w-10 h-10 text-center bg-white border border-slate-200 rounded-lg font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-200"
                   />
-                  <span className="text-slate-300 font-black text-xs">VS</span>
+                  <span className="text-slate-300 font-black text-[10px]">VS</span>
                   <input
                     type="number"
                     min="0"
@@ -61,9 +65,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
                   />
                 </div>
 
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+                {/* Team B - Left Aligned */}
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
                   {teamB && <FlagImage iso2={teamB.iso2} name={teamB.name} size="w-7 h-5" />}
-                  <span className="text-xs font-bold text-slate-700 truncate">{teamB?.name}</span>
+                  <span className="text-xs font-bold text-slate-700 leading-tight text-left">
+                    {teamB?.name}
+                  </span>
                 </div>
               </div>
             );
@@ -85,7 +92,6 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
               <tbody className="divide-y divide-slate-100">
                 {standings.map((s, idx) => {
                   const team = teams.find(t => t.id === s.teamId);
-                  // O indicador só fica verde se estiver no Top 2 E tiver jogado pelo menos uma vez
                   const isQualifyingPos = idx < 2;
                   const hasPlayed = s.played > 0;
                   const showIndicator = isQualifyingPos && hasPlayed;
@@ -95,7 +101,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
                       <td className="py-2.5 flex items-center gap-2 min-w-0">
                         <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${showIndicator ? "bg-green-500" : "bg-slate-300"}`}></span>
                         {team && <FlagImage iso2={team.iso2} name={team.name} size="w-5 h-3.5" />}
-                        <span className={`font-bold truncate ${showIndicator ? "text-slate-900" : "text-slate-500"}`}>{team?.name}</span>
+                        <span className={`font-bold leading-tight ${showIndicator ? "text-slate-900" : "text-slate-500"}`}>
+                          {team?.name}
+                        </span>
                       </td>
                       <td className="text-center font-black text-indigo-600">{s.points}</td>
                       <td className="text-center text-slate-600 font-medium">{s.goalsDifference}</td>
