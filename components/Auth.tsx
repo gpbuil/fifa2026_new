@@ -15,6 +15,7 @@ const Auth: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const APP_URL = 'https://fifa2026-new.pages.dev';
 
   useEffect(() => {
     // 1. Verificar se a URL contém o token de recuperação (evita tela em branco)
@@ -74,7 +75,7 @@ const Auth: React.FC = () => {
       }
       else if (mode === 'forgot') {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin,
+        redirectTo: `${APP_URL}/`,
         });
         
         if (resetError) throw resetError;
@@ -107,9 +108,7 @@ const Auth: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({ 
         provider,
-        options: {
-          redirectTo: window.location.origin
-        }
+        options: { redirectTo: `${APP_URL}/` },
       });
       if (error) throw error;
     } catch (error: any) {
