@@ -8,6 +8,8 @@ const Auth: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
@@ -245,28 +247,70 @@ useEffect(() => {
                   </button>
                 )}
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  placeholder="••••••••"
+                  data-testid="password-input"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  data-testid="password-toggle"
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3.53 2.47a.75.75 0 0 0-1.06 1.06l2.1 2.1A10.86 10.86 0 0 0 1.5 12c1.64 3.05 5.06 6.75 10.5 6.75 2.2 0 4.1-.6 5.7-1.5l3.76 3.76a.75.75 0 1 0 1.06-1.06l-18-18ZM12 17.25c-3.54 0-6.13-2.14-7.6-5.25.7-1.37 1.74-2.71 3.28-3.64l2.08 2.08a3.75 3.75 0 0 0 4.8 4.8l1.94 1.94c-.98.44-2.09.67-3.5.67Zm3.02-4.45-5.82-5.82a3.75 3.75 0 0 1 5.82 5.82Z" />
+                      <path d="M12 6.75c3.54 0 6.13 2.14 7.6 5.25-.5.98-1.17 1.95-2.03 2.8a.75.75 0 0 0 1.06 1.06c1.1-1.1 1.95-2.32 2.6-3.49C20.86 8.32 17.44 4.5 12 4.5c-1.28 0-2.47.2-3.56.54a.75.75 0 1 0 .46 1.43c.93-.3 1.98-.47 3.1-.47Z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 4.5c5.44 0 8.86 3.82 10.5 7.5-1.64 3.68-5.06 7.5-10.5 7.5S3.14 15.68 1.5 12C3.14 8.32 6.56 4.5 12 4.5Zm0 12.75a5.25 5.25 0 1 0 0-10.5 5.25 5.25 0 0 0 0 10.5Zm0-2.25a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
           {mode === 'reset-password' && (
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Confirmar Nova Senha</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  placeholder="••••••••"
+                  data-testid="confirm-password-input"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  data-testid="confirm-password-toggle"
+                >
+                  {showConfirmPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3.53 2.47a.75.75 0 0 0-1.06 1.06l2.1 2.1A10.86 10.86 0 0 0 1.5 12c1.64 3.05 5.06 6.75 10.5 6.75 2.2 0 4.1-.6 5.7-1.5l3.76 3.76a.75.75 0 1 0 1.06-1.06l-18-18ZM12 17.25c-3.54 0-6.13-2.14-7.6-5.25.7-1.37 1.74-2.71 3.28-3.64l2.08 2.08a3.75 3.75 0 0 0 4.8 4.8l1.94 1.94c-.98.44-2.09.67-3.5.67Zm3.02-4.45-5.82-5.82a3.75 3.75 0 0 1 5.82 5.82Z" />
+                      <path d="M12 6.75c3.54 0 6.13 2.14 7.6 5.25-.5.98-1.17 1.95-2.03 2.8a.75.75 0 0 0 1.06 1.06c1.1-1.1 1.95-2.32 2.6-3.49C20.86 8.32 17.44 4.5 12 4.5c-1.28 0-2.47.2-3.56.54a.75.75 0 1 0 .46 1.43c.93-.3 1.98-.47 3.1-.47Z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 4.5c5.44 0 8.86 3.82 10.5 7.5-1.64 3.68-5.06 7.5-10.5 7.5S3.14 15.68 1.5 12C3.14 8.32 6.56 4.5 12 4.5Zm0 12.75a5.25 5.25 0 1 0 0-10.5 5.25 5.25 0 0 0 0 10.5Zm0-2.25a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           )}
           
