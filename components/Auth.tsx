@@ -17,21 +17,23 @@ const Auth: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const APP_URL = 'https://fifa2026-new.pages.dev';
 
-  useEffect(() => {
-    // 1. Verificar se a URL contém o token de recuperação (evita tela em branco)
-    if (window.location.hash && window.location.hash.includes('type=recovery')) {
+useEffect(() => {
+  const flagged = sessionStorage.getItem('sb-recovery') === '1';
+  if (flagged) {
+    setMode('reset-password');
+    sessionStorage.removeItem('sb-recovery');
+  }
+
+  supabase.auth.getSession().catch(console.error);
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
       setMode('reset-password');
     }
+  });
 
-    // 2. Escuta mudanças de estado em tempo real
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMode('reset-password');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  return () => subscription.unsubscribe();
+}, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
