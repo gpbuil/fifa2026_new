@@ -17,7 +17,7 @@ const Auth: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const APP_URL = 'https://fifa2026-new.pages.dev';
+  const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
 
 useEffect(() => {
   const flagged = sessionStorage.getItem('sb-recovery') === '1';
