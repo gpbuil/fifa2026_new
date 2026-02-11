@@ -170,31 +170,31 @@ const App: React.FC = () => {
     });
 
     const r16 = [
-      { id: '89', a: 'W74', b: 'W77', venue: 'Lincoln Financial Field (Philadelphia)' },
-      { id: '90', a: 'W73', b: 'W75', venue: 'NRG Stadium (Houston)' },
-      { id: '91', a: 'W76', b: 'W78', venue: 'MetLife Stadium (New York/NJ)' },
-      { id: '92', a: 'W79', b: 'W80', venue: 'Estadio Azteca (Mexico City)' },
-      { id: '93', a: 'W83', b: 'W84', venue: 'AT&T Stadium (Dallas)' },
-      { id: '94', a: 'W81', b: 'W82', venue: 'Lumen Field (Seattle)' },
-      { id: '95', a: 'W86', b: 'W88', venue: 'Mercedes-Benz Stadium (Atlanta)' },
-      { id: '96', a: 'W85', b: 'W87', venue: 'BC Place (Vancouver)' }
+      { id: '89', a: 'W74', b: 'W77', venue: 'Philadelphia' },
+      { id: '90', a: 'W73', b: 'W75', venue: 'Houston' },
+      { id: '91', a: 'W76', b: 'W78', venue: 'New York/NJ' },
+      { id: '92', a: 'W79', b: 'W80', venue: 'Mexico City' },
+      { id: '93', a: 'W83', b: 'W84', venue: 'Dallas' },
+      { id: '94', a: 'W81', b: 'W82', venue: 'Seattle' },
+      { id: '95', a: 'W86', b: 'W88', venue: 'Atlanta' },
+      { id: '96', a: 'W85', b: 'W87', venue: 'Vancouver' }
     ];
 
     const qf = [
-      { id: '97', a: 'W89', b: 'W90', venue: 'Gillette Stadium (Boston)' },
-      { id: '98', a: 'W93', b: 'W94', venue: 'SoFi Stadium (Los Angeles)' },
-      { id: '99', a: 'W91', b: 'W92', venue: 'Hard Rock Stadium (Miami)' },
-      { id: '100', a: 'W95', b: 'W96', venue: 'Arrowhead Stadium (Kansas City)' }
+      { id: '97', a: 'W89', b: 'W90', venue: 'Boston' },
+      { id: '98', a: 'W93', b: 'W94', venue: 'Los Angeles' },
+      { id: '99', a: 'W91', b: 'W92', venue: 'Miami' },
+      { id: '100', a: 'W95', b: 'W96', venue: 'Kansas City' }
     ];
 
     const sf = [
-      { id: '101', a: 'W97', b: 'W98', venue: 'AT&T Stadium (Dallas)' },
-      { id: '102', a: 'W99', b: 'W100', venue: 'Mercedes-Benz Stadium (Atlanta)' }
+      { id: '101', a: 'W97', b: 'W98', venue: 'Dallas' },
+      { id: '102', a: 'W99', b: 'W100', venue: 'Atlanta' }
     ];
 
     const finals = [
-      { id: '103', a: 'L101', b: 'L102', venue: 'Hard Rock Stadium (Miami)' },
-      { id: '104', a: 'W101', b: 'W102', venue: 'MetLife Stadium (New York/NJ)' }
+      { id: '103', a: 'L101', b: 'L102', venue: 'Miami' },
+      { id: '104', a: 'W101', b: 'W102', venue: 'New York/NJ' }
     ];
 
     [...r16, ...qf, ...sf, ...finals].forEach(struct => {
