@@ -31,14 +31,14 @@ const TeamRow: React.FC<{
         {team ? (
           <>
             <FlagImage iso2={team.iso2} name={team.name} size="w-5 h-3.5" />
-            <span className="text-xs font-bold text-slate-800 truncate">{team.name}</span>
+            <span className="text-sm font-bold text-slate-800 truncate">{team.name}</span>
           </>
         ) : (
           <>
             <div className="w-5 h-3.5 bg-slate-50 rounded-sm border border-dashed border-slate-300 flex items-center justify-center">
               <span className="text-[8px] text-slate-300">?</span>
             </div>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight truncate">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate">
               {label}
             </span>
           </>
@@ -50,7 +50,7 @@ const TeamRow: React.FC<{
         placeholder="-"
         value={score === null || score === undefined ? '' : score}
         onChange={(e) => onScoreChange(e.target.value)}
-        className="w-8 h-8 text-center bg-slate-50 border border-slate-200 rounded-md text-xs font-black outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-200"
+        className="w-8 h-8 text-center bg-slate-50 border border-slate-200 rounded-md text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-200"
       />
     </div>
   );
@@ -67,23 +67,23 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onSc
 
   return (
     <div className="relative">
-      <div className="overflow-x-auto pb-12 cursor-grab active:cursor-grabbing custom-scrollbar">
-        <div className="flex gap-10 min-w-max px-4">
+      <div className="px-2 md:px-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
           {rounds.map((round) => (
-            <div key={round.id} className="flex flex-col gap-8 w-64">
-              <h3 className="text-center font-black text-indigo-900 uppercase tracking-widest text-[11px] py-2.5 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-sm">
+            <div key={round.id} className="flex flex-col gap-5">
+              <h3 className="text-center font-black text-indigo-900 uppercase tracking-widest text-[11px] py-2 bg-indigo-50/50 rounded-xl border border-indigo-100 shadow-sm">
                 {round.title}
               </h3>
-              <div className="flex flex-col justify-around flex-1 gap-6">
+              <div className="flex flex-col gap-4">
                 {round.matches.sort((a, b) => parseInt(a.id) - parseInt(b.id)).map((m) => (
-                  <div key={m.id} className={`bg-white rounded-2xl border ${m.id === '104' ? 'border-amber-400 shadow-amber-100' : 'border-slate-200'} shadow-sm overflow-hidden hover:shadow-md transition-all`}>
-                    <div className={`${m.id === '104' ? 'bg-amber-50' : m.id === '103' ? 'bg-orange-50' : 'bg-slate-50'} px-3 py-1.5 border-b border-slate-100 flex justify-between items-center`}>
+                  <div key={m.id} className={`bg-white rounded-xl border ${m.id === '104' ? 'border-amber-400 shadow-amber-100' : 'border-slate-200'} shadow-sm overflow-hidden hover:shadow-md transition-all`}>
+                    <div className={`${m.id === '104' ? 'bg-amber-50' : m.id === '103' ? 'bg-orange-50' : 'bg-slate-50'} px-2.5 py-1 border-b border-slate-100 flex justify-between items-center`}>
                       <div className="flex flex-col">
-                        <span className={`text-[9px] font-black ${m.id === '104' ? 'text-amber-600' : m.id === '103' ? 'text-orange-600' : 'text-indigo-600'} uppercase`}>
+                        <span className={`text-[10px] font-black ${m.id === '104' ? 'text-amber-600' : m.id === '103' ? 'text-orange-600' : 'text-indigo-600'} uppercase`}>
                           {m.id === '104' ? 'GRANDE FINAL' : m.id === '103' ? 'DISPUTA 3º LUGAR' : `JOGO ${m.id}`}
                         </span>
                       </div>
-                      <span className="text-[9px] font-bold text-slate-400 truncate max-w-[100px]">{m.venue}</span>
+                      <span className="text-[10px] font-bold text-slate-400 truncate max-w-[120px]">{m.venue}</span>
                     </div>
                     <div className="p-1 space-y-0.5">
                       <TeamRow 
@@ -106,11 +106,6 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onSc
             </div>
           ))}
         </div>
-      </div>
-      
-      {/* Indicador visual de scroll para ajudar na orientação */}
-      <div className="absolute right-0 bottom-4 bg-indigo-600 text-white text-[10px] font-bold py-1.5 px-3 rounded-l-full shadow-lg animate-pulse pointer-events-none xl:hidden">
-        Deslize para ver as finais →
       </div>
     </div>
   );

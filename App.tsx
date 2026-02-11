@@ -136,15 +136,120 @@ const App: React.FC = () => {
     }
   };
 
+  const teamById = useMemo(() => {
+    const map = new Map<string, typeof TEAMS_DATA[number]>();
+    TEAMS_DATA.forEach(t => map.set(t.id, t));
+    return map;
+  }, []);
+
+  const groupPlacements = useMemo(() => {
+    const map = new Map<string, string>();
+    GROUPS.forEach(groupLetter => {
+      const groupTeams = TEAMS_DATA.filter(t => t.group === groupLetter);
+      const groupMatches = matches.filter(m => m.group === groupLetter);
+      const standings = calculateGroupStandings(groupTeams, groupMatches);
+      const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
+      if (!hasAnyMatch) return;
+      const top3 = standings.slice(0, 3).map(s => s.teamId);
+      if (top3[0]) map.set(`1${groupLetter}`, top3[0]);
+      if (top3[1]) map.set(`2${groupLetter}`, top3[1]);
+      if (top3[2]) map.set(`3${groupLetter}`, top3[2]);
+    });
+    return map;
+  }, [matches]);
+
+  const { bestThirdPlaces } = useMemo(() => {
+    return getAdvancedTeams(GROUPS, TEAMS_DATA, matches);
+  }, [matches]);
+
   const knockoutMatches = useMemo(() => {
     const k: Match[] = [];
     R32_STRUCTURE.forEach(struct => {
       const score = knockoutScores[struct.id] || { a: null, b: null };
       k.push({ id: struct.id, group: 'KO', teamA: struct.a, teamB: struct.b, scoreA: score.a, scoreB: score.b, venue: struct.venue });
     });
-    // ... restante da lógica do mata-mata omitida por brevidade, assumindo que está correta ...
+
+    const r16 = [
+      { id: '89', a: 'W74', b: 'W77', venue: 'Lincoln Financial Field (Philadelphia)' },
+      { id: '90', a: 'W73', b: 'W75', venue: 'NRG Stadium (Houston)' },
+      { id: '91', a: 'W76', b: 'W78', venue: 'MetLife Stadium (New York/NJ)' },
+      { id: '92', a: 'W79', b: 'W80', venue: 'Estadio Azteca (Mexico City)' },
+      { id: '93', a: 'W83', b: 'W84', venue: 'AT&T Stadium (Dallas)' },
+      { id: '94', a: 'W81', b: 'W82', venue: 'Lumen Field (Seattle)' },
+      { id: '95', a: 'W86', b: 'W88', venue: 'Mercedes-Benz Stadium (Atlanta)' },
+      { id: '96', a: 'W85', b: 'W87', venue: 'BC Place (Vancouver)' }
+    ];
+
+    const qf = [
+      { id: '97', a: 'W89', b: 'W90', venue: 'Gillette Stadium (Boston)' },
+      { id: '98', a: 'W93', b: 'W94', venue: 'SoFi Stadium (Los Angeles)' },
+      { id: '99', a: 'W91', b: 'W92', venue: 'Hard Rock Stadium (Miami)' },
+      { id: '100', a: 'W95', b: 'W96', venue: 'Arrowhead Stadium (Kansas City)' }
+    ];
+
+    const sf = [
+      { id: '101', a: 'W97', b: 'W98', venue: 'AT&T Stadium (Dallas)' },
+      { id: '102', a: 'W99', b: 'W100', venue: 'Mercedes-Benz Stadium (Atlanta)' }
+    ];
+
+    const finals = [
+      { id: '103', a: 'L101', b: 'L102', venue: 'Hard Rock Stadium (Miami)' },
+      { id: '104', a: 'W101', b: 'W102', venue: 'MetLife Stadium (New York/NJ)' }
+    ];
+
+    [...r16, ...qf, ...sf, ...finals].forEach(struct => {
+      const score = knockoutScores[struct.id] || { a: null, b: null };
+      k.push({ id: struct.id, group: 'KO', teamA: struct.a, teamB: struct.b, scoreA: score.a, scoreB: score.b, venue: struct.venue });
+    });
+
     return k;
   }, [knockoutScores, R32_STRUCTURE]);
+
+  const resolvePlaceholder = useCallback((id: string) => {
+    const visited = new Set<string>();
+
+    const resolve = (token: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
+      if (visited.has(token)) return { label: token };
+      visited.add(token);
+
+      const groupMatch = token.match(/^([123])([A-L])$/);
+      if (groupMatch) {
+        const teamId = groupPlacements.get(token);
+        const team = teamId ? teamById.get(teamId) : undefined;
+        return team ? { team, label: team.name } : { label: token };
+      }
+
+      const thirdMatch = token.match(/^3rd-(\d+)-/i);
+      if (thirdMatch) {
+        const index = parseInt(thirdMatch[1], 10) - 1;
+        const team = bestThirdPlaces[index];
+        return team ? { team, label: team.name } : { label: token };
+      }
+
+      const wlMatch = token.match(/^([WL])(\d{2,3})$/i);
+      if (wlMatch) {
+        const kind = wlMatch[1].toUpperCase();
+        const matchId = wlMatch[2];
+        const match = knockoutMatches.find(m => m.id === matchId);
+        if (!match) return { label: token };
+        const a = resolve(match.teamA);
+        const b = resolve(match.teamB);
+        const hasScores = match.scoreA !== null && match.scoreA !== undefined && match.scoreB !== null && match.scoreB !== undefined;
+        if (!hasScores || !a.team || !b.team) return { label: token };
+        if (match.scoreA === match.scoreB) return { label: token };
+        const winner = match.scoreA > match.scoreB ? a.team : b.team;
+        const loser = match.scoreA > match.scoreB ? b.team : a.team;
+        return kind === 'W' ? { team: winner, label: winner.name } : { team: loser, label: loser.name };
+      }
+
+      const directTeam = teamById.get(token);
+      if (directTeam) return { team: directTeam, label: directTeam.name };
+
+      return { label: token };
+    };
+
+    return resolve(id);
+  }, [bestThirdPlaces, groupPlacements, knockoutMatches, teamById]);
 
   const handleScoreChange = (matchId: string, team: 'A' | 'B', value: string) => {
     const numValue = value === '' ? null : parseInt(value);
@@ -194,7 +299,7 @@ const App: React.FC = () => {
               ))}
             </div>
         ) : (
-          <KnockoutBracket allTeams={TEAMS_DATA} knockoutMatches={knockoutMatches} onScoreChange={handleScoreChange} resolvePlaceholder={(id) => ({ label: id })} />
+          <KnockoutBracket allTeams={TEAMS_DATA} knockoutMatches={knockoutMatches} onScoreChange={handleScoreChange} resolvePlaceholder={resolvePlaceholder} />
         )}
       </main>
     </div>
