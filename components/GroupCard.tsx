@@ -8,6 +8,8 @@ interface GroupCardProps {
   teams: Team[];
   matches: Match[];
   onScoreChange: (matchId: string, team: 'A' | 'B', value: string) => void;
+  predictionsLocked?: boolean;
+  officialScores?: Record<string, { a: number | null; b: number | null }>;
 }
 
 const FlagImage: React.FC<{ iso2: string; name: string; size?: string }> = ({ iso2, name, size = "w-6 h-4" }) => (
@@ -18,7 +20,7 @@ const FlagImage: React.FC<{ iso2: string; name: string; size?: string }> = ({ is
   />
 );
 
-const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onScoreChange }) => {
+const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onScoreChange, predictionsLocked = false, officialScores }) => {
   const standings = calculateGroupStandings(teams, matches);
 
   return (
@@ -34,6 +36,8 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
           {matches.map(match => {
             const teamA = teams.find(t => t.id === match.teamA);
             const teamB = teams.find(t => t.id === match.teamB);
+            const official = officialScores?.[match.id];
+            const hasOfficial = official && official.a !== null && official.b !== null;
             return (
               <div key={match.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors min-h-[72px]">
                 {/* Team A - Right Aligned */}
@@ -45,14 +49,16 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
                 </div>
                 
                 {/* Score Inputs */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex flex-col items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5">
                   <input
                     type="number"
                     min="0"
                     placeholder="0"
                     value={match.scoreA === null ? '' : match.scoreA}
                     onChange={(e) => onScoreChange(match.id, 'A', e.target.value)}
-                    className="w-10 h-10 text-center bg-white border border-slate-200 rounded-lg font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-200"
+                    disabled={predictionsLocked}
+                    className="w-10 h-10 text-center bg-white border border-slate-200 rounded-lg font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                   <span className="text-slate-300 font-black text-[10px]">VS</span>
                   <input
@@ -61,8 +67,16 @@ const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onSc
                     placeholder="0"
                     value={match.scoreB === null ? '' : match.scoreB}
                     onChange={(e) => onScoreChange(match.id, 'B', e.target.value)}
-                    className="w-10 h-10 text-center bg-white border border-slate-200 rounded-lg font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-200"
+                    disabled={predictionsLocked}
+                    className="w-10 h-10 text-center bg-white border border-slate-200 rounded-lg font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
+                  </div>
+                  {predictionsLocked && (
+                    <div className="text-[10px] font-bold text-slate-500 text-center">
+                      <div>Seu palpite: {match.scoreA ?? '-'} x {match.scoreB ?? '-'}</div>
+                      <div className="text-indigo-600">Oficial: {hasOfficial ? `${official!.a} x ${official!.b}` : '-'}</div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Team B - Left Aligned */}

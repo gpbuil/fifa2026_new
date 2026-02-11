@@ -7,6 +7,8 @@ interface KnockoutBracketProps {
   knockoutMatches: Match[];
   onScoreChange: (matchId: string, team: 'A' | 'B', value: string) => void;
   resolvePlaceholder: (id: string) => { team?: Team; label: string };
+  predictionsLocked?: boolean;
+  officialScores?: Record<string, { a: number | null; b: number | null }>;
 }
 
 const FlagImage: React.FC<{ iso2: string; name: string; size?: string }> = ({ iso2, name, size = "w-6 h-4" }) => (
@@ -22,7 +24,8 @@ const TeamRow: React.FC<{
   score: number | null | undefined; 
   onScoreChange: (val: string) => void;
   resolve: (id: string) => { team?: Team; label: string };
-}> = ({ teamId, score, onScoreChange, resolve }) => {
+  disabled?: boolean;
+}> = ({ teamId, score, onScoreChange, resolve, disabled = false }) => {
   const { team, label } = resolve(teamId);
 
   return (
@@ -50,13 +53,14 @@ const TeamRow: React.FC<{
         placeholder="-"
         value={score === null || score === undefined ? '' : score}
         onChange={(e) => onScoreChange(e.target.value)}
-        className="w-8 h-8 text-center bg-slate-50 border border-slate-200 rounded-md text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-200"
+        disabled={disabled}
+        className="w-8 h-8 text-center bg-slate-50 border border-slate-200 rounded-md text-sm font-black outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
       />
     </div>
   );
 };
 
-const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onScoreChange, resolvePlaceholder }) => {
+const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onScoreChange, resolvePlaceholder, predictionsLocked = false, officialScores }) => {
   const rounds = [
     { title: "Rodada de 32", id: "R32", matches: knockoutMatches.filter(m => parseInt(m.id) >= 73 && parseInt(m.id) <= 88) },
     { title: "Rodada de 16", id: "R16", matches: knockoutMatches.filter(m => parseInt(m.id) >= 89 && parseInt(m.id) <= 96) },
@@ -75,7 +79,10 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onSc
                 {round.title}
               </h3>
               <div className="flex flex-col gap-4">
-                {round.matches.sort((a, b) => parseInt(a.id) - parseInt(b.id)).map((m) => (
+                {round.matches.sort((a, b) => parseInt(a.id) - parseInt(b.id)).map((m) => {
+                  const official = officialScores?.[m.id];
+                  const hasOfficial = official && official.a !== null && official.b !== null;
+                  return (
                   <div key={m.id} className={`bg-white rounded-xl border ${m.id === '104' ? 'border-amber-400 shadow-amber-100' : 'border-slate-200'} shadow-sm overflow-hidden hover:shadow-md transition-all`}>
                     <div className={`${m.id === '104' ? 'bg-amber-50' : m.id === '103' ? 'bg-orange-50' : 'bg-slate-50'} px-2.5 py-1 border-b border-slate-100 flex justify-between items-center`}>
                       <div className="flex flex-col">
@@ -91,6 +98,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onSc
                         score={m.scoreA} 
                         onScoreChange={(val) => onScoreChange(m.id, 'A', val)}
                         resolve={resolvePlaceholder}
+                        disabled={predictionsLocked}
                       />
                       <div className="h-px bg-slate-50 mx-2"></div>
                       <TeamRow 
@@ -98,10 +106,18 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({ knockoutMatches, onSc
                         score={m.scoreB} 
                         onScoreChange={(val) => onScoreChange(m.id, 'B', val)}
                         resolve={resolvePlaceholder}
+                        disabled={predictionsLocked}
                       />
+                      {predictionsLocked && (
+                        <div className="text-[10px] font-bold text-slate-500 px-2 pb-1">
+                          <div>Seu palpite: {m.scoreA ?? '-'} x {m.scoreB ?? '-'}</div>
+                          <div className="text-indigo-600">Oficial: {hasOfficial ? `${official!.a} x ${official!.b}` : '-'}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

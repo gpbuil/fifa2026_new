@@ -6,6 +6,8 @@ import { Match, ViewMode } from './types';
 import Auth from './components/Auth';
 import GroupCard from './components/GroupCard';
 import KnockoutBracket from './components/KnockoutBracket';
+import AdminDashboard from './components/AdminDashboard';
+import RankingView from './components/RankingView';
 import { getAdvancedTeams, calculateGroupStandings } from './services/simulator';
 
 const App: React.FC = () => {
@@ -15,6 +17,17 @@ const App: React.FC = () => {
   const [knockoutScores, setKnockoutScores] = useState<Record<string, {a: number | null, b: number | null}>>({});
   const [loading, setLoading] = useState(true);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [predictionsLocked, setPredictionsLocked] = useState<boolean | null>(null);
+  const [officialResults, setOfficialResults] = useState<Record<string, {a: number | null, b: number | null}>>({});
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
+  const [profiles, setProfiles] = useState<{ id: string; full_name: string | null }[]>([]);
+  const [allPredictions, setAllPredictions] = useState<{ user_id: string; match_id: string; score_a: number | null; score_b: number | null }[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(false);
+
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isRankingRoute = pathname.startsWith('/ranking');
 
   console.log("App renderizado. Reset Mode:", isResettingPassword);
 
@@ -79,6 +92,69 @@ const App: React.FC = () => {
     }
   }, [initMatches]);
 
+  const fetchRole = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('role').eq('id', userId).single();
+      if (error) throw error;
+      setIsAdmin(data?.role === 'admin');
+    } catch (e) {
+      console.warn("Erro ao buscar role:", e);
+      setIsAdmin(false);
+    } finally {
+      setRoleLoading(false);
+    }
+  }, []);
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('app_settings').select('predictions_locked').limit(1);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setPredictionsLocked(!!data[0].predictions_locked);
+      } else {
+        setPredictionsLocked(false);
+      }
+    } catch (e) {
+      console.warn("Erro ao buscar settings:", e);
+      setPredictionsLocked(false);
+    }
+  }, []);
+
+  const fetchOfficialResults = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('official_results').select('match_id, score_a, score_b');
+      if (error) throw error;
+      const map: Record<string, {a: number | null, b: number | null}> = {};
+      data?.forEach((r: any) => {
+        map[r.match_id] = { a: r.score_a, b: r.score_b };
+      });
+      setOfficialResults(map);
+    } catch (e) {
+      console.warn("Erro ao buscar resultados oficiais:", e);
+      setOfficialResults({});
+    }
+  }, []);
+
+  const fetchRankingData = useCallback(async () => {
+    setRankingLoading(true);
+    try {
+      const [{ data: profilesData, error: profilesError }, { data: predictionsData, error: predictionsError }] = await Promise.all([
+        supabase.from('profiles').select('id, full_name'),
+        supabase.from('predictions').select('user_id, match_id, score_a, score_b')
+      ]);
+      if (profilesError) throw profilesError;
+      if (predictionsError) throw predictionsError;
+      setProfiles(profilesData ?? []);
+      setAllPredictions(predictionsData ?? []);
+    } catch (e) {
+      console.warn("Erro ao buscar ranking:", e);
+      setProfiles([]);
+      setAllPredictions([]);
+    } finally {
+      setRankingLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // Detecta token de recuperação na URL antes de qualquer coisa
     const hash = window.location.hash;
@@ -92,8 +168,13 @@ const App: React.FC = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log("Sessão inicial:", session?.user?.email);
       setSession(session);
-      if (session) fetchPredictions(session.user.id);
-      else setMatches(initMatches());
+      if (session) {
+        fetchPredictions(session.user.id);
+        fetchRole(session.user.id);
+      } else {
+        setMatches(initMatches());
+        setRoleLoading(false);
+      }
       setLoading(false);
     });
 
@@ -104,7 +185,10 @@ const App: React.FC = () => {
       }
       if (event === 'SIGNED_IN') {
         setSession(session);
-        if (session) fetchPredictions(session.user.id);
+        if (session) {
+          fetchPredictions(session.user.id);
+          fetchRole(session.user.id);
+        }
         // Só sai do reset se não houver token pendente
         if (!window.location.hash.includes('type=recovery')) {
           setIsResettingPassword(false);
@@ -115,14 +199,26 @@ const App: React.FC = () => {
         setMatches(initMatches());
         setKnockoutScores({});
         setIsResettingPassword(false);
+        setIsAdmin(false);
+        setRoleLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [initMatches, fetchPredictions]);
+  }, [initMatches, fetchPredictions, fetchRole]);
+
+  useEffect(() => {
+    fetchSettings();
+    fetchOfficialResults();
+  }, [fetchSettings, fetchOfficialResults]);
+
+  useEffect(() => {
+    if (isRankingRoute) fetchRankingData();
+  }, [isRankingRoute, fetchRankingData]);
 
   const savePrediction = async (matchId: string, scoreA: number, scoreB: number) => {
     if (!session?.user?.id) return;
+    if (predictionsLocked) return;
     try {
       await supabase.from('predictions').upsert({
         user_id: session.user.id, 
@@ -133,6 +229,43 @@ const App: React.FC = () => {
       }, { onConflict: 'user_id,match_id' });
     } catch (e) {
       console.error("Erro ao salvar palpite:", e);
+    }
+  };
+
+  const updatePredictionsLocked = async (nextValue: boolean) => {
+    try {
+      const { data, error } = await supabase.from('app_settings').select('id').limit(1);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        await supabase.from('app_settings').update({
+          predictions_locked: nextValue,
+          updated_at: new Date().toISOString()
+        }).eq('id', data[0].id);
+      } else {
+        await supabase.from('app_settings').insert({
+          predictions_locked: nextValue,
+          updated_at: new Date().toISOString()
+        });
+      }
+      setPredictionsLocked(nextValue);
+    } catch (e) {
+      console.error("Erro ao atualizar bloqueio:", e);
+    }
+  };
+
+  const saveOfficialResult = async (matchId: string, scoreA: number, scoreB: number) => {
+    if (!session?.user?.id) return;
+    try {
+      await supabase.from('official_results').upsert({
+        match_id: matchId,
+        score_a: scoreA,
+        score_b: scoreB,
+        updated_by: session.user.id,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'match_id' });
+      fetchOfficialResults();
+    } catch (e) {
+      console.error("Erro ao salvar resultado oficial:", e);
     }
   };
 
@@ -252,6 +385,7 @@ const App: React.FC = () => {
   }, [bestThirdPlaces, groupPlacements, knockoutMatches, teamById]);
 
   const handleScoreChange = (matchId: string, team: 'A' | 'B', value: string) => {
+    if (predictionsLocked) return;
     const numValue = value === '' ? null : parseInt(value);
     if (matchId.length <= 3) {
       setKnockoutScores(prev => {
@@ -276,6 +410,67 @@ const App: React.FC = () => {
   
   if (!session || isResettingPassword) return <Auth />;
 
+  if (isAdminRoute) {
+    return (
+      <div className="min-h-screen bg-slate-50 pb-20">
+        <nav className="sticky top-0 z-50 glass border-b border-slate-200">
+          <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">âš½</span>
+              <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026 ADMIN</span>
+            </div>
+            <div className="flex gap-2">
+              <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">Voltar ao app</a>
+              <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
+            </div>
+          </div>
+        </nav>
+        {roleLoading ? (
+          <div className="max-w-[1600px] mx-auto px-4 py-10 text-sm text-slate-500">Carregando permissÃµes...</div>
+        ) : (
+          <AdminDashboard
+            isAdmin={isAdmin}
+            predictionsLocked={predictionsLocked}
+            officialResults={officialResults}
+            onToggleLock={updatePredictionsLocked}
+            onSaveOfficial={saveOfficialResult}
+            groupMatches={matches}
+            knockoutMatches={knockoutMatches}
+            resolvePlaceholder={resolvePlaceholder}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (isRankingRoute) {
+    return (
+      <div className="min-h-screen bg-slate-50 pb-20">
+        <nav className="sticky top-0 z-50 glass border-b border-slate-200">
+          <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">âš½</span>
+              <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026 RANKING</span>
+            </div>
+            <div className="flex gap-2">
+              <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">Voltar ao app</a>
+              {isAdmin && (
+                <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ADMIN</a>
+              )}
+              <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
+            </div>
+          </div>
+        </nav>
+        <RankingView
+          profiles={profiles}
+          predictions={allPredictions}
+          officialResults={officialResults}
+          loading={rankingLoading}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <nav className="sticky top-0 z-50 glass border-b border-slate-200">
@@ -285,6 +480,14 @@ const App: React.FC = () => {
             <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026</span>
           </div>
           <div className="flex gap-2">
+            {isAdmin && (
+              <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">
+                ADMIN
+              </a>
+            )}
+            <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
+              RANKING
+            </a>
             <button onClick={() => setView(ViewMode.GROUPS)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
             <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
           </div>
@@ -292,14 +495,34 @@ const App: React.FC = () => {
         </div>
       </nav>
       <main className="max-w-[1600px] mx-auto px-4 py-8">
+        {predictionsLocked && (
+          <div className="mb-6 bg-amber-50 border border-amber-100 text-amber-700 text-sm font-semibold rounded-xl px-4 py-3">
+            Palpites encerrados. Agora vocÃª acompanha a comparaÃ§Ã£o com os resultados oficiais.
+          </div>
+        )}
         {view === ViewMode.GROUPS ? (
            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
               {GROUPS.map(g => (
-                <GroupCard key={g} groupLetter={g} teams={TEAMS_DATA.filter(t => t.group === g)} matches={matches.filter(m => m.group === g)} onScoreChange={handleScoreChange} />
+                <GroupCard
+                  key={g}
+                  groupLetter={g}
+                  teams={TEAMS_DATA.filter(t => t.group === g)}
+                  matches={matches.filter(m => m.group === g)}
+                  onScoreChange={handleScoreChange}
+                  predictionsLocked={!!predictionsLocked}
+                  officialScores={officialResults}
+                />
               ))}
             </div>
         ) : (
-          <KnockoutBracket allTeams={TEAMS_DATA} knockoutMatches={knockoutMatches} onScoreChange={handleScoreChange} resolvePlaceholder={resolvePlaceholder} />
+          <KnockoutBracket
+            allTeams={TEAMS_DATA}
+            knockoutMatches={knockoutMatches}
+            onScoreChange={handleScoreChange}
+            resolvePlaceholder={resolvePlaceholder}
+            predictionsLocked={!!predictionsLocked}
+            officialScores={officialResults}
+          />
         )}
       </main>
     </div>
@@ -307,3 +530,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
