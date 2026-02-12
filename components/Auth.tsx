@@ -149,7 +149,9 @@ useEffect(() => {
 
       <div className="max-w-md w-full glass p-8 rounded-2xl shadow-xl border border-white">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-900 tracking-tight">Copa 2026</h1>
+          <div className="flex justify-center mb-4">
+            <img src="/logobolao.png" alt="Bolão" className="h-40 w-40 object-contain" />
+          </div>
           <p className="text-slate-500 text-sm mt-2">
             {mode === 'register' ? 'Crie sua conta para participar' : 
              mode === 'forgot' ? 'Recupere o acesso à sua conta' : 

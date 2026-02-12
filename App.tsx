@@ -384,6 +384,87 @@ const App: React.FC = () => {
     return resolve(id);
   }, [bestThirdPlaces, groupPlacements, knockoutMatches, teamById]);
 
+  const resolveOfficialPlaceholder = useCallback((id: string) => {
+    const visited = new Set<string>();
+
+    const officialGroupPlacements = new Map<string, string>();
+    GROUPS.forEach(groupLetter => {
+      const groupTeams = TEAMS_DATA.filter(t => t.group === groupLetter);
+      const groupMatches = matches.filter(m => m.group === groupLetter).map(m => {
+        const official = officialResults[m.id];
+        return {
+          ...m,
+          scoreA: official?.a ?? null,
+          scoreB: official?.b ?? null
+        };
+      });
+      const standings = calculateGroupStandings(groupTeams, groupMatches);
+      const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
+      if (!hasAnyMatch) return;
+      const top3 = standings.slice(0, 3).map(s => s.teamId);
+      if (top3[0]) officialGroupPlacements.set(`1${groupLetter}`, top3[0]);
+      if (top3[1]) officialGroupPlacements.set(`2${groupLetter}`, top3[1]);
+      if (top3[2]) officialGroupPlacements.set(`3${groupLetter}`, top3[2]);
+    });
+
+    const officialAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, matches.map(m => {
+      const official = officialResults[m.id];
+      return { ...m, scoreA: official?.a ?? null, scoreB: official?.b ?? null };
+    }));
+
+    const resolve = (token: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
+      if (visited.has(token)) return { label: token };
+      visited.add(token);
+
+      const groupMatch = token.match(/^([123])([A-L])$/);
+      if (groupMatch) {
+        const teamId = officialGroupPlacements.get(token);
+        const team = teamId ? teamById.get(teamId) : undefined;
+        return team ? { team, label: team.name } : { label: token };
+      }
+
+      const thirdMatch = token.match(/^3rd-(\d+)-/i);
+      if (thirdMatch) {
+        const index = parseInt(thirdMatch[1], 10) - 1;
+        const team = officialAdvanced.bestThirdPlaces[index];
+        return team ? { team, label: team.name } : { label: token };
+      }
+
+      const wlMatch = token.match(/^([WL])(\d{2,3})$/i);
+      if (wlMatch) {
+        const kind = wlMatch[1].toUpperCase();
+        const matchId = wlMatch[2];
+        const match = knockoutMatches.find(m => m.id === matchId);
+        if (!match) return { label: token };
+        const a = resolve(match.teamA);
+        const b = resolve(match.teamB);
+        const score = officialResults[matchId];
+        const hasScores = score && score.a !== null && score.b !== null;
+        if (!hasScores || !a.team || !b.team) return { label: token };
+        if (score.a === score.b) return { label: token };
+        const winner = score.a > score.b ? a.team : b.team;
+        const loser = score.a > score.b ? b.team : a.team;
+        return kind === 'W' ? { team: winner, label: winner.name } : { team: loser, label: loser.name };
+      }
+
+      const directTeam = teamById.get(token);
+      if (directTeam) return { team: directTeam, label: directTeam.name };
+
+      return { label: token };
+    };
+
+    return resolve(id);
+  }, [matches, officialResults, teamById, knockoutMatches]);
+
+  const groupResultsTotal = useMemo(() => matches.length, [matches]);
+  const groupResultsCount = useMemo(() => {
+    return matches.filter(m => {
+      const official = officialResults[m.id];
+      return official && official.a !== null && official.b !== null;
+    }).length;
+  }, [matches, officialResults]);
+  const groupResultsComplete = groupResultsTotal > 0 && groupResultsCount === groupResultsTotal;
+
   const handleScoreChange = (matchId: string, team: 'A' | 'B', value: string) => {
     if (predictionsLocked) return;
     const numValue = value === '' ? null : parseInt(value);
@@ -414,9 +495,9 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 pb-20">
         <nav className="sticky top-0 z-50 glass border-b border-slate-200">
-          <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">âš½</span>
+              <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
               <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026 ADMIN</span>
             </div>
             <div className="flex gap-2">
@@ -436,7 +517,10 @@ const App: React.FC = () => {
             onSaveOfficial={saveOfficialResult}
             groupMatches={matches}
             knockoutMatches={knockoutMatches}
-            resolvePlaceholder={resolvePlaceholder}
+            resolvePlaceholder={resolveOfficialPlaceholder}
+            groupResultsComplete={groupResultsComplete}
+            groupResultsCount={groupResultsCount}
+            groupResultsTotal={groupResultsTotal}
           />
         )}
       </div>
@@ -447,9 +531,9 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 pb-20">
         <nav className="sticky top-0 z-50 glass border-b border-slate-200">
-          <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">âš½</span>
+              <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
               <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026 RANKING</span>
             </div>
             <div className="flex gap-2">
@@ -474,9 +558,9 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <nav className="sticky top-0 z-50 glass border-b border-slate-200">
-        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">⚽</span>
+            <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
             <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026</span>
           </div>
           <div className="flex gap-2">
@@ -530,5 +614,9 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
+
+
 
 
