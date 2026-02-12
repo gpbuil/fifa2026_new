@@ -138,20 +138,103 @@ const App: React.FC = () => {
   const fetchRankingData = useCallback(async () => {
     setRankingLoading(true);
     try {
-      const [{ data: profilesData, error: profilesError }, { data: predictionsData, error: predictionsError }] = await Promise.all([
-        supabase.from('profiles').select('id, full_name'),
-        supabase.from('predictions').select('user_id, match_id, score_a, score_b')
-      ]);
-      if (profilesError) throw profilesError;
-      if (predictionsError) throw predictionsError;
-      setProfiles(profilesData ?? []);
-      setAllPredictions(predictionsData ?? []);
+      const { data: rankingRows, error: rankingRpcError } = await supabase.rpc('get_ranking_rows');
+
+      if (!rankingRpcError && Array.isArray(rankingRows) && rankingRows.length > 0) {
+        const rowByUser = new Map<string, { id: string; full_name: string | null }>();
+        const predictionsRows: { user_id: string; match_id: string; score_a: number | null; score_b: number | null }[] = [];
+
+        rankingRows.forEach((row: any) => {
+          if (!rowByUser.has(row.user_id)) {
+            rowByUser.set(row.user_id, {
+              id: row.user_id,
+              full_name: row.full_name ?? `Jogador ${String(row.user_id).slice(0, 6)}`
+            });
+          }
+          predictionsRows.push({
+            user_id: row.user_id,
+            match_id: row.match_id,
+            score_a: row.score_a,
+            score_b: row.score_b
+          });
+        });
+
+        setProfiles(Array.from(rowByUser.values()));
+        setAllPredictions(predictionsRows);
+      } else {
+        const [{ data: profilesData, error: profilesError }, { data: predictionsData, error: predictionsError }] = await Promise.all([
+          supabase.from('profiles').select('id, full_name'),
+          supabase.from('predictions').select('user_id, match_id, score_a, score_b')
+        ]);
+        if (profilesError) throw profilesError;
+        if (predictionsError) throw predictionsError;
+
+        const profilesRows = profilesData ?? [];
+        const predictionsRows = predictionsData ?? [];
+        const profileById = new Map(profilesRows.map((p) => [p.id, p]));
+        const predictionUserIds = Array.from(new Set(predictionsRows.map((p) => p.user_id)));
+        const predictionUserIdSet = new Set(predictionUserIds);
+
+        const rankingProfiles = [
+          ...predictionUserIds.map((userId) => ({
+            id: userId,
+            full_name: profileById.get(userId)?.full_name ?? `Jogador ${userId.slice(0, 6)}`
+          })),
+          ...profilesRows.filter((p) => !predictionUserIdSet.has(p.id))
+        ];
+
+        setProfiles(rankingProfiles);
+        setAllPredictions(predictionsRows);
+      }
     } catch (e) {
       console.warn("Erro ao buscar ranking:", e);
       setProfiles([]);
       setAllPredictions([]);
     } finally {
       setRankingLoading(false);
+    }
+  }, []);
+
+  const syncProfileFromAuthUser = useCallback(async (user: any) => {
+    if (!user?.id) return;
+
+    const metadata = user.user_metadata ?? {};
+    const metadataName =
+      metadata.full_name
+      || metadata.name
+      || [metadata.first_name, metadata.last_name].filter(Boolean).join(' ').trim()
+      || null;
+    const metadataPhone = metadata.phone ?? null;
+
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      if (!profileData) {
+        const { error: insertError } = await supabase.from('profiles').insert({
+          id: user.id,
+          full_name: metadataName,
+          phone: metadataPhone
+        });
+        if (insertError) throw insertError;
+        return;
+      }
+
+      const payload: { full_name?: string | null; phone?: string | null } = {};
+      if (!profileData.full_name && metadataName) payload.full_name = metadataName;
+      if (!profileData.phone && metadataPhone) payload.phone = metadataPhone;
+
+      if (Object.keys(payload).length) {
+        const { error: updateError } = await supabase.from('profiles').update(payload).eq('id', user.id);
+        if (updateError) throw updateError;
+      }
+    } catch (e) {
+      console.warn("Erro ao sincronizar perfil:", e);
     }
   }, []);
 
@@ -169,6 +252,7 @@ const App: React.FC = () => {
       console.log("Sessão inicial:", session?.user?.email);
       setSession(session);
       if (session) {
+        syncProfileFromAuthUser(session.user);
         fetchPredictions(session.user.id);
         fetchRole(session.user.id);
       } else {
@@ -186,6 +270,7 @@ const App: React.FC = () => {
       if (event === 'SIGNED_IN') {
         setSession(session);
         if (session) {
+          syncProfileFromAuthUser(session.user);
           fetchPredictions(session.user.id);
           fetchRole(session.user.id);
         }
@@ -205,7 +290,7 @@ const App: React.FC = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [initMatches, fetchPredictions, fetchRole]);
+  }, [initMatches, fetchPredictions, fetchRole, syncProfileFromAuthUser]);
 
   useEffect(() => {
     fetchSettings();

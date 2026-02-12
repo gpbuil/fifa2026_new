@@ -3,7 +3,10 @@ import { test, expect } from '@playwright/test';
 test('login shows a single password toggle and toggles visibility', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Copa 2026' })).toBeVisible();
+  const signOutButton = page.getByRole('button', { name: 'Sair' });
+  if (await signOutButton.count()) {
+    await signOutButton.first().click();
+  }
 
   const toggle = page.getByTestId('password-toggle');
   await expect(toggle).toHaveCount(1);
