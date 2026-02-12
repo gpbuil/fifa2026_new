@@ -15,6 +15,9 @@ interface AdminDashboardProps {
   groupMatches: Match[];
   knockoutMatches: Match[];
   resolvePlaceholder: (id: string) => { team?: Team; label: string };
+  groupResultsComplete: boolean;
+  groupResultsCount: number;
+  groupResultsTotal: number;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -25,7 +28,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSaveOfficial,
   groupMatches,
   knockoutMatches,
-  resolvePlaceholder
+  resolvePlaceholder,
+  groupResultsComplete,
+  groupResultsCount,
+  groupResultsTotal
 }) => {
   const [drafts, setDrafts] = useState<ScoreMap>({});
   const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
@@ -147,6 +153,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <h3 className="text-lg font-black text-slate-900 mb-4">Resultados oficiais - Mata-mata</h3>
+        {!groupResultsComplete && (
+          <div className="mb-4 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+            Para liberar o mata-mata oficial, finalize todos os jogos da fase de grupos. ({groupResultsCount}/{groupResultsTotal})
+          </div>
+        )}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {rounds.map(round => (
             <div key={round.title} className="border border-slate-100 rounded-xl p-4 bg-slate-50/40">
@@ -171,7 +182,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             const val = e.target.value === '' ? null : parseInt(e.target.value);
                             setDrafts(prev => ({ ...prev, [match.id]: { ...prev[match.id], a: val } }));
                           }}
-                          className="w-10 h-8 text-center bg-white border border-slate-200 rounded-md text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                          disabled={!groupResultsComplete}
+                          className="w-10 h-8 text-center bg-white border border-slate-200 rounded-md text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                         <span className="text-slate-300 text-[10px] font-black">X</span>
                         <input
@@ -183,13 +195,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             const val = e.target.value === '' ? null : parseInt(e.target.value);
                             setDrafts(prev => ({ ...prev, [match.id]: { ...prev[match.id], b: val } }));
                           }}
-                          className="w-10 h-8 text-center bg-white border border-slate-200 rounded-md text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                          disabled={!groupResultsComplete}
+                          className="w-10 h-8 text-center bg-white border border-slate-200 rounded-md text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div className="text-xs font-semibold text-slate-700 min-w-[120px] text-right">{b.team?.name ?? b.label}</div>
                       <button
                         className="text-xs font-bold px-3 py-1.5 rounded-md bg-indigo-600 text-white disabled:opacity-50"
-                        disabled={!canSave || isSaving}
+                        disabled={!canSave || isSaving || !groupResultsComplete}
                         onClick={async () => {
                           if (!canSave) return;
                           setSavingIds(prev => ({ ...prev, [match.id]: true }));
