@@ -354,9 +354,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
     <section className="ranking-wireframe max-w-[1600px] mx-auto px-4 py-8" data-testid="ranking-wireframe-layout">
       <header className="ranking-top-card">
         <div>
-          <p className="ranking-kicker">Copa 2026</p>
           <h2 className="ranking-title">Ranking Geral</h2>
-          <p className="ranking-subtitle">Pontuacao acumulada com base nos resultados oficiais.</p>
         </div>
         <div className="ranking-top-controls">
           <div className="ranking-chip">Participantes: {summaries.length}</div>
@@ -458,6 +456,14 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
             <>
               <div className="ranking-detail-scroll">
                 <table className="ranking-detail-table" data-testid="detail-table">
+                  <colgroup>
+                    <col className="detail-col-phase" />
+                    <col className="detail-col-match" />
+                    <col className="detail-col-official" />
+                    <col className="detail-col-prediction" />
+                    <col className="detail-col-rule" />
+                    <col className="detail-col-points" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>Fase</th>
@@ -472,7 +478,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
                     {detailRows.map(({ match, matchup }) => (
                       <tr key={`${activeSummary.userId}-${match.matchId}`} data-testid="detail-row">
                         <td>{match.phaseLabel}</td>
-                        <td>
+                        <td className="detail-match-cell">
                           <div className="detail-matchup" data-testid="detail-matchup">
                             <span className="detail-team">
                               {renderFlag(matchup.a)}

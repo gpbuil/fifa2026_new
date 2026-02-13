@@ -93,7 +93,7 @@
 
 .ranking-main-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 34%) minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 24%) minmax(0, 1fr);
   gap: 0.9rem;
   align-items: start;
 }
@@ -217,8 +217,33 @@
 .ranking-detail-table {
   width: 100%;
   min-width: 940px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8rem;
+}
+
+.ranking-detail-table .detail-col-phase {
+  width: 120px;
+}
+
+.ranking-detail-table .detail-col-match {
+  width: 380px;
+}
+
+.ranking-detail-table .detail-col-official {
+  width: 110px;
+}
+
+.ranking-detail-table .detail-col-prediction {
+  width: 110px;
+}
+
+.ranking-detail-table .detail-col-rule {
+  width: 140px;
+}
+
+.ranking-detail-table .detail-col-points {
+  width: 70px;
 }
 
 .ranking-detail-table th,
@@ -246,7 +271,17 @@
   display: flex;
   align-items: center;
   gap: 0.42rem;
-  min-width: 330px;
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-match-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail-team {
@@ -254,6 +289,7 @@
   align-items: center;
   gap: 0.26rem;
   min-width: 0;
+  overflow: hidden;
 }
 
 .detail-flag-wrap {
@@ -295,6 +331,8 @@
   font-size: 0.79rem;
   font-weight: 700;
   color: var(--ranking-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -309,6 +347,7 @@
 .detail-points-cell {
   font-weight: 800;
   color: var(--ranking-accent);
+  white-space: nowrap;
 }
 
 .ranking-pagination {

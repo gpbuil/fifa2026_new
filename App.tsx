@@ -620,10 +620,10 @@ const App: React.FC = () => {
           <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
-              <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026 RANKING</span>
+              <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">BOLÃO DA COPA DO MANDUCA</span>
             </div>
             <div className="flex gap-2">
-              <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">Voltar ao app</a>
+              <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">VOLTAR AOS SEUS RESULTADOS</a>
               {isAdmin && (
                 <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ADMIN</a>
               )}
@@ -647,19 +647,20 @@ const App: React.FC = () => {
         <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
-            <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026</span>
+            <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">BOLÃO DA COPA DO MANDUCA</span>
           </div>
           <div className="flex gap-2">
+
+            <button onClick={() => setView(ViewMode.GROUPS)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
+            <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
+            <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
+              RANKING
+            </a>
             {isAdmin && (
               <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">
                 ADMIN
               </a>
             )}
-            <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
-              RANKING
-            </a>
-            <button onClick={() => setView(ViewMode.GROUPS)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
-            <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
           </div>
           <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
         </div>
@@ -667,9 +668,7 @@ const App: React.FC = () => {
       <main className="prediction-shell max-w-[1600px] mx-auto px-4 py-8">
         <section className="prediction-top-card">
           <div>
-            <p className="prediction-kicker">Copa 2026</p>
             <h2 className="prediction-title">Entrada de Resultados</h2>
-            <p className="prediction-subtitle">Layout condensado para preencher jogos com mais velocidade.</p>
           </div>
           <div className="prediction-chips">
             <span className="prediction-chip">Grupos: {GROUPS.length}</span>
