@@ -74,7 +74,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div>
           <h2 className="text-xl font-black text-slate-900">Admin</h2>
           <p className="text-slate-600 text-sm">
-            Bloqueie palpites globais e atualize os resultados oficiais.
+            Bloqueie resultados globais e atualize os resultados oficiais.
           </p>
         </div>
         <button
@@ -84,7 +84,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           }`}
           disabled={predictionsLocked === null}
         >
-          {predictionsLocked === null ? 'Carregando...' : predictionsLocked ? 'Desbloquear palpites' : 'Bloquear palpites'}
+          {predictionsLocked === null ? 'Carregando...' : predictionsLocked ? 'Desbloquear resultados' : 'Bloquear resultados'}
         </button>
       </div>
 
