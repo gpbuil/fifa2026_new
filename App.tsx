@@ -361,6 +361,51 @@ const App: React.FC = () => {
     return map;
   }, []);
 
+  const groupCardsData = useMemo(() => {
+    return GROUPS.map((groupLetter) => {
+      const groupTeams = TEAMS_DATA.filter((team) => team.group === groupLetter);
+      const groupMatches = matches.filter((match) => match.group === groupLetter);
+      const resultRows = groupMatches.map((match) => {
+        const official = officialResults[match.id];
+        return {
+          matchId: match.id,
+          teamA: teamById.get(match.teamA),
+          teamB: teamById.get(match.teamB),
+          predictedA: match.scoreA,
+          predictedB: match.scoreB,
+          officialA: official?.a ?? null,
+          officialB: official?.b ?? null
+        };
+      });
+
+      const groupMatchesOfficial = groupMatches.map((match) => {
+        const official = officialResults[match.id];
+        return {
+          ...match,
+          scoreA: official?.a ?? null,
+          scoreB: official?.b ?? null
+        };
+      });
+
+      const standings = calculateGroupStandings(groupTeams, groupMatchesOfficial).map((standing) => {
+        const team = teamById.get(standing.teamId);
+        return {
+          teamId: standing.teamId,
+          teamName: team?.name ?? standing.teamId,
+          teamIso2: team?.iso2 ?? '',
+          points: standing.points,
+          goalsDifference: standing.goalsDifference
+        };
+      });
+
+      return {
+        groupLetter,
+        resultRows,
+        standings
+      };
+    });
+  }, [matches, officialResults, teamById]);
+
   const groupPlacements = useMemo(() => {
     const map = new Map<string, string>();
     GROUPS.forEach(groupLetter => {
@@ -699,7 +744,138 @@ const App: React.FC = () => {
           </div>
         )}
         {view === ViewMode.GROUPS ? (
-           <div className="pv-groups-grid">
+          predictionsLocked ? (
+            <div className="pv-groups-blocked-grid" data-testid="groups-blocked-grid">
+              {groupCardsData.map((groupCard) => (
+                <section
+                  key={groupCard.groupLetter}
+                  className="pv-group-blocked-card"
+                  data-testid={`group-blocked-card-${groupCard.groupLetter}`}
+                >
+                  <header className="pv-group-blocked-head">
+                    <h3 className="pv-group-title">Grupo {groupCard.groupLetter}</h3>
+                    <span className="pv-group-chip">{groupCard.resultRows.length} jogos</span>
+                  </header>
+
+                  <div className="pv-group-blocked-body">
+                    <div className="pv-group-blocked-results">
+                      <table className="pv-group-results-table" data-testid={`group-results-table-${groupCard.groupLetter}`}>
+                        <thead>
+                          <tr>
+                            <th>Jogo</th>
+                            <th className="is-center">Res.Ofic</th>
+                            <th className="is-center">Palpite</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupCard.resultRows.map((row) => (
+                            <tr key={row.matchId} data-testid="groups-results-row">
+                              <td>
+                                <div className="pv-tracking-matchup">
+                                  <span className="pv-tracking-team pv-tracking-team-a">
+                                    {row.teamA && (
+                                      <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamA.name}`}>
+                                        <img
+                                          src={`https://flagcdn.com/w20/${row.teamA.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamA.iso2.toLowerCase()}.png`}
+                                          srcSet={`https://flagcdn.com/w40/${row.teamA.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamA.iso2.toLowerCase()}.png 2x`}
+                                          alt={`Bandeira ${row.teamA.name}`}
+                                          className="pv-flag"
+                                          loading="lazy"
+                                          onError={(event) => {
+                                            event.currentTarget.style.display = 'none';
+                                            const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                            if (fallback) fallback.style.display = 'inline-flex';
+                                          }}
+                                        />
+                                        <span className="pv-flag-fallback">{row.teamA.iso2.toUpperCase().slice(0, 2)}</span>
+                                      </span>
+                                    )}
+                                    <span className="pv-team-name">{row.teamA?.name ?? '-'}</span>
+                                  </span>
+                                  <span className="pv-tracking-vs">vs</span>
+                                  <span className="pv-tracking-team pv-tracking-team-b">
+                                    {row.teamB && (
+                                      <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamB.name}`}>
+                                        <img
+                                          src={`https://flagcdn.com/w20/${row.teamB.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamB.iso2.toLowerCase()}.png`}
+                                          srcSet={`https://flagcdn.com/w40/${row.teamB.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamB.iso2.toLowerCase()}.png 2x`}
+                                          alt={`Bandeira ${row.teamB.name}`}
+                                          className="pv-flag"
+                                          loading="lazy"
+                                          onError={(event) => {
+                                            event.currentTarget.style.display = 'none';
+                                            const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                            if (fallback) fallback.style.display = 'inline-flex';
+                                          }}
+                                        />
+                                        <span className="pv-flag-fallback">{row.teamB.iso2.toUpperCase().slice(0, 2)}</span>
+                                      </span>
+                                    )}
+                                    <span className="pv-team-name">{row.teamB?.name ?? '-'}</span>
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="is-center">
+                                {row.officialA !== null && row.officialB !== null ? `${row.officialA} x ${row.officialB}` : '-'}
+                              </td>
+                              <td className="is-center">
+                                {row.predictedA !== null && row.predictedA !== undefined && row.predictedB !== null && row.predictedB !== undefined
+                                  ? `${row.predictedA} x ${row.predictedB}`
+                                  : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="pv-group-blocked-standings">
+                      <table className="pv-group-standings-mini-table" data-testid={`group-standings-table-${groupCard.groupLetter}`}>
+                        <thead>
+                          <tr>
+                            <th>Time</th>
+                            <th className="is-center">PTS</th>
+                            <th className="is-center">SG</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupCard.standings.map((row) => (
+                            <tr key={`${groupCard.groupLetter}-${row.teamId}`} data-testid="groups-standings-row">
+                              <td>
+                                <span className="pv-tracking-team">
+                                  {row.teamIso2 ? (
+                                    <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamName}`}>
+                                      <img
+                                        src={`https://flagcdn.com/w20/${row.teamIso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamIso2.toLowerCase()}.png`}
+                                        srcSet={`https://flagcdn.com/w40/${row.teamIso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamIso2.toLowerCase()}.png 2x`}
+                                        alt={`Bandeira ${row.teamName}`}
+                                        className="pv-flag"
+                                        loading="lazy"
+                                        onError={(event) => {
+                                          event.currentTarget.style.display = 'none';
+                                          const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                          if (fallback) fallback.style.display = 'inline-flex';
+                                        }}
+                                      />
+                                      <span className="pv-flag-fallback">{row.teamIso2.toUpperCase().slice(0, 2)}</span>
+                                    </span>
+                                  ) : null}
+                                  <span className="pv-team-name">{row.teamName}</span>
+                                </span>
+                              </td>
+                              <td className="is-center">{row.points}</td>
+                              <td className="is-center">{row.goalsDifference}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="pv-groups-grid">
               {GROUPS.map(g => (
                 <GroupCard
                   key={g}
@@ -712,6 +888,7 @@ const App: React.FC = () => {
                 />
               ))}
             </div>
+          )
         ) : (
           <KnockoutBracket
             allTeams={TEAMS_DATA}
@@ -728,9 +905,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
-
-
-
-
-

@@ -59,6 +59,35 @@ const GroupCard: React.FC<GroupCardProps> = ({
               const teamB = teams.find((team) => team.id === match.teamB);
               const official = officialScores?.[match.id];
               const hasOfficial = official && official.a !== null && official.b !== null;
+              const predictionA = match.scoreA;
+              const predictionB = match.scoreB;
+              const hasPrediction = predictionA !== null && predictionB !== null;
+
+              const predictedLabel = `${predictionA ?? '-'} x ${predictionB ?? '-'}`;
+              const officialLabel = hasOfficial ? `${official.a} x ${official.b}` : '-';
+
+              let statusLabel = 'Sem oficial';
+              let statusClass = 'is-pending';
+
+              if (hasOfficial && hasPrediction) {
+                if (predictionA === official.a && predictionB === official.b) {
+                  statusLabel = 'Acertou placar';
+                  statusClass = 'is-exact';
+                } else {
+                  const predictedOutcome = predictionA === predictionB ? 'draw' : predictionA > predictionB ? 'a' : 'b';
+                  const officialOutcome = official.a === official.b ? 'draw' : official.a > official.b ? 'a' : 'b';
+                  if (predictedOutcome === officialOutcome) {
+                    statusLabel = 'Acertou resultado';
+                    statusClass = 'is-outcome';
+                  } else {
+                    statusLabel = 'Nao acertou';
+                    statusClass = 'is-miss';
+                  }
+                }
+              } else if (hasOfficial) {
+                statusLabel = 'Sem palpite';
+                statusClass = 'is-pending';
+              }
 
               return (
                 <div key={match.id} className="pv-match-row" data-testid="group-match-row">
@@ -90,9 +119,14 @@ const GroupCard: React.FC<GroupCardProps> = ({
                       />
                     </div>
                     {predictionsLocked && (
-                      <div className="pv-lock-meta">
-                        <span>Seu palpite: {match.scoreA ?? '-'} x {match.scoreB ?? '-'}</span>
-                        <span>Oficial: {hasOfficial ? `${official!.a} x ${official!.b}` : '-'}</span>
+                      <div className="pv-result-compare">
+                        <span className="pv-result-chip">
+                          <span className="pv-result-label">Palpite:</span> {predictedLabel}
+                        </span>
+                        <span className="pv-result-chip">
+                          <span className="pv-result-label">Oficial:</span> {officialLabel}
+                        </span>
+                        <span className={`pv-result-status ${statusClass}`}>{statusLabel}</span>
                       </div>
                     )}
                   </div>

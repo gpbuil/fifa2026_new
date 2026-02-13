@@ -140,7 +140,7 @@
 
 .pv-group-body {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.34fr);
   gap: 0.52rem;
 }
 
@@ -150,6 +150,285 @@
   border-radius: 0.65rem;
   overflow: hidden;
   background: #fff;
+}
+
+.pv-tracking-stack {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.pv-groups-blocked-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.pv-group-blocked-card {
+  border: 1px solid var(--pv-soft-border);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pv-group-blocked-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--pv-soft-border);
+  background: rgba(20, 42, 84, 0.04);
+}
+
+.pv-group-blocked-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr);
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.pv-group-blocked-results,
+.pv-group-blocked-standings {
+  border: 1px solid var(--pv-soft-border);
+  border-radius: 0.62rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pv-group-results-table,
+.pv-group-standings-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pv-group-results-table th,
+.pv-group-results-table td,
+.pv-group-standings-mini-table th,
+.pv-group-standings-mini-table td {
+  border-bottom: 1px solid var(--pv-soft-border);
+  padding: 0.32rem 0.4rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.pv-group-results-table th,
+.pv-group-standings-mini-table th {
+  color: var(--pv-brand);
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(20, 42, 84, 0.05);
+}
+
+.pv-group-results-table td,
+.pv-group-standings-mini-table td {
+  font-size: 0.76rem;
+}
+
+.pv-group-results-table tbody tr:nth-child(2n),
+.pv-group-standings-mini-table tbody tr:nth-child(2n) {
+  background: rgba(20, 42, 84, 0.015);
+}
+
+.pv-group-results-table tr:last-child td,
+.pv-group-standings-mini-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.pv-group-results-table th.is-center,
+.pv-group-results-table td.is-center,
+.pv-group-standings-mini-table th.is-center,
+.pv-group-standings-mini-table td.is-center {
+  text-align: center;
+}
+
+.pv-tracking-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+}
+
+.pv-tracking-card {
+  border: 1px solid var(--pv-soft-border);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pv-tracking-side {
+  display: flex;
+  flex-direction: column;
+}
+
+.pv-tracking-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--pv-soft-border);
+  background: rgba(20, 42, 84, 0.04);
+}
+
+.pv-tracking-scroll {
+  overflow-x: auto;
+}
+
+.pv-tracking-table {
+  width: 100%;
+  min-width: 920px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.pv-tracking-table .pv-track-col-group {
+  width: 78px;
+}
+
+.pv-tracking-table .pv-track-col-match {
+  width: 480px;
+}
+
+.pv-tracking-table .pv-track-col-predicted,
+.pv-tracking-table .pv-track-col-official {
+  width: 180px;
+}
+
+.pv-tracking-table .pv-track-col-team {
+  width: auto;
+}
+
+.pv-tracking-table .pv-track-col-points,
+.pv-tracking-table .pv-track-col-sg {
+  width: 88px;
+}
+
+.pv-tracking-table th,
+.pv-tracking-table td {
+  border-bottom: 1px solid var(--pv-soft-border);
+  padding: 0.42rem 0.54rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.pv-tracking-table th {
+  background: rgba(20, 42, 84, 0.08);
+  color: var(--pv-brand);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.pv-tracking-table tbody tr:nth-child(2n) {
+  background: rgba(20, 42, 84, 0.02);
+}
+
+.pv-tracking-table th.is-center,
+.pv-tracking-table td.is-center {
+  text-align: center;
+}
+
+.pv-tracking-matchup {
+  display: flex;
+  align-items: center;
+  gap: 0.36rem;
+  min-width: 0;
+}
+
+.pv-tracking-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pv-tracking-team-a {
+  justify-content: flex-end;
+}
+
+.pv-tracking-vs {
+  font-size: 0.66rem;
+  font-weight: 900;
+  color: var(--pv-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  flex: none;
+}
+
+.pv-tracking-empty {
+  padding: 0.7rem;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pv-soft);
+}
+
+.pv-tracking-side-scroll {
+  max-height: 72vh;
+  overflow-y: auto;
+  padding: 0.4rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pv-tracking-empty-side {
+  padding: 1.1rem 0.7rem;
+}
+
+.pv-standings-mini-group {
+  border: 1px solid var(--pv-soft-border);
+  border-radius: 0.62rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pv-standings-mini-head {
+  padding: 0.3rem 0.46rem;
+  background: rgba(20, 42, 84, 0.07);
+  border-bottom: 1px solid var(--pv-soft-border);
+  color: var(--pv-brand);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pv-standings-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pv-standings-mini-table th,
+.pv-standings-mini-table td {
+  border-bottom: 1px solid var(--pv-soft-border);
+  padding: 0.3rem 0.36rem;
+  text-align: left;
+}
+
+.pv-standings-mini-table th {
+  color: var(--pv-brand);
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(20, 42, 84, 0.03);
+}
+
+.pv-standings-mini-table td {
+  font-size: 0.73rem;
+}
+
+.pv-standings-mini-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.pv-standings-mini-table th.is-center,
+.pv-standings-mini-table td.is-center {
+  text-align: center;
 }
 
 .pv-table-head {
@@ -289,8 +568,76 @@
   color: var(--pv-soft);
 }
 
-.pv-lock-meta span:last-child {
+.pv-result-compare {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.24rem;
+  max-width: 100%;
+  margin-top: 0.08rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.pv-result-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.14rem;
+  padding: 0.08rem 0.28rem;
+  border-radius: 999px;
+  border: 1px solid rgba(20, 42, 84, 0.14);
+  background: rgba(20, 42, 84, 0.03);
   color: var(--pv-brand);
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pv-result-label {
+  color: var(--pv-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.56rem;
+  font-weight: 800;
+}
+
+.pv-result-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.38rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.pv-result-status.is-exact {
+  color: #0e6f3c;
+  border-color: rgba(14, 111, 60, 0.28);
+  background: rgba(14, 111, 60, 0.12);
+}
+
+.pv-result-status.is-outcome {
+  color: #155a98;
+  border-color: rgba(21, 90, 152, 0.28);
+  background: rgba(21, 90, 152, 0.1);
+}
+
+.pv-result-status.is-miss {
+  color: #a23826;
+  border-color: rgba(162, 56, 38, 0.24);
+  background: rgba(162, 56, 38, 0.1);
+}
+
+.pv-result-status.is-pending {
+  color: #5e6a81;
+  border-color: rgba(94, 106, 129, 0.24);
+  background: rgba(94, 106, 129, 0.1);
 }
 
 .pv-standings-list {
@@ -302,7 +649,7 @@
   grid-template-columns: minmax(0, 1fr) 36px 36px;
   align-items: center;
   gap: 0.2rem;
-  padding: 0.33rem 0.42rem;
+  padding: 0.28rem 0.36rem;
   border-bottom: 1px solid var(--pv-soft-border);
 }
 
@@ -334,16 +681,20 @@
 
 .pv-standings-points {
   text-align: center;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 900;
   color: var(--pv-brand);
 }
 
 .pv-standings-sg {
   text-align: center;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   color: var(--pv-soft);
   font-weight: 700;
+}
+
+.pv-standings-team .pv-team-name {
+  font-size: 0.76rem;
 }
 
 .pv-ko-grid {
@@ -475,6 +826,18 @@
     grid-template-columns: 1fr;
   }
 
+  .pv-groups-blocked-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pv-group-blocked-body {
+    grid-template-columns: 1fr;
+  }
+
+  .pv-tracking-grid {
+    grid-template-columns: 1fr;
+  }
+
   .pv-group-body {
     grid-template-columns: 1fr;
   }
@@ -500,5 +863,14 @@
 
   .pv-ko-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pv-group-blocked-body {
+    padding: 0.42rem;
+  }
+
+  .pv-group-results-table td,
+  .pv-group-standings-mini-table td {
+    font-size: 0.74rem;
   }
 }

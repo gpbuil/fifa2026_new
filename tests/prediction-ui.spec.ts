@@ -21,8 +21,15 @@ test.describe('prediction input ui', () => {
     await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible();
 
     await expect(page.getByText('Entrada de Resultados')).toBeVisible();
-    await expect(page.getByTestId('group-card-A')).toBeVisible();
-    await expect(page.getByTestId('group-match-row').first()).toBeVisible();
+    const blockedGrid = page.getByTestId('groups-blocked-grid');
+    if (await blockedGrid.count()) {
+      await expect(blockedGrid).toBeVisible();
+      await expect(page.locator('[data-testid^="group-results-table-"]').first()).toBeVisible();
+      await expect(page.locator('[data-testid^="group-standings-table-"]').first()).toBeVisible();
+    } else {
+      await expect(page.getByTestId('group-card-A')).toBeVisible();
+      await expect(page.getByTestId('group-match-row').first()).toBeVisible();
+    }
 
     await page.getByRole('button', { name: 'MATA-MATA' }).click();
     await expect(page.getByTestId('knockout-grid')).toBeVisible();
@@ -44,7 +51,12 @@ test.describe('prediction input ui', () => {
     await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible();
 
     await expect(page.getByTestId('prediction-mobile-tabs')).toBeVisible();
-    await expect(page.getByTestId('group-card-A')).toBeVisible();
+    const blockedGrid = page.getByTestId('groups-blocked-grid');
+    if (await blockedGrid.count()) {
+      await expect(blockedGrid).toBeVisible();
+    } else {
+      await expect(page.getByTestId('group-card-A')).toBeVisible();
+    }
 
     await page.getByRole('button', { name: 'Mata-mata' }).click();
     await expect(page.getByTestId('knockout-grid')).toBeVisible();
