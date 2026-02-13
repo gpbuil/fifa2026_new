@@ -226,8 +226,16 @@
   width: 120px;
 }
 
-.ranking-detail-table .detail-col-match {
-  width: 380px;
+.ranking-detail-table .detail-col-team-a {
+  width: 180px;
+}
+
+.ranking-detail-table .detail-col-vs {
+  width: 40px;
+}
+
+.ranking-detail-table .detail-col-team-b {
+  width: 180px;
 }
 
 .ranking-detail-table .detail-col-official {
@@ -252,6 +260,7 @@
   padding: 0.44rem 0.52rem;
   text-align: left;
   vertical-align: middle;
+  line-height: 1.2;
 }
 
 .ranking-detail-table th {
@@ -267,21 +276,25 @@
   background: rgba(20, 42, 84, 0.025);
 }
 
-.detail-matchup {
-  display: flex;
-  align-items: center;
-  gap: 0.42rem;
-  min-width: 0;
-  width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.detail-center-col {
+  text-align: center !important;
+  vertical-align: middle;
 }
 
-.detail-match-cell {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.detail-game-team-a-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.detail-game-vs-cell {
+  text-align: center;
+}
+
+.detail-game-team-b-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .detail-team {
@@ -289,7 +302,16 @@
   align-items: center;
   gap: 0.26rem;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
+}
+
+.detail-team-a {
+  justify-content: flex-end;
+}
+
+.detail-team-b {
+  justify-content: flex-start;
 }
 
 .detail-flag-wrap {
@@ -331,6 +353,7 @@
   font-size: 0.79rem;
   font-weight: 700;
   color: var(--ranking-text);
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

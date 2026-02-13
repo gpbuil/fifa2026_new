@@ -458,7 +458,9 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
                 <table className="ranking-detail-table" data-testid="detail-table">
                   <colgroup>
                     <col className="detail-col-phase" />
-                    <col className="detail-col-match" />
+                    <col className="detail-col-team-a" />
+                    <col className="detail-col-vs" />
+                    <col className="detail-col-team-b" />
                     <col className="detail-col-official" />
                     <col className="detail-col-prediction" />
                     <col className="detail-col-rule" />
@@ -467,41 +469,43 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
                   <thead>
                     <tr>
                       <th>Fase</th>
-                      <th>Jogo</th>
-                      <th>Res.Oficial</th>
-                      <th>Palpite</th>
+                      <th colSpan={3} className="detail-center-col">Jogo</th>
+                      <th className="detail-center-col">Res.Oficial</th>
+                      <th className="detail-center-col">Palpite</th>
                       <th>Regra</th>
-                      <th>PTS</th>
+                      <th className="detail-center-col">PTS</th>
                     </tr>
                   </thead>
                   <tbody data-testid="detail-list">
                     {detailRows.map(({ match, matchup }) => (
                       <tr key={`${activeSummary.userId}-${match.matchId}`} data-testid="detail-row">
                         <td>{match.phaseLabel}</td>
-                        <td className="detail-match-cell">
-                          <div className="detail-matchup" data-testid="detail-matchup">
-                            <span className="detail-team">
-                              {renderFlag(matchup.a)}
-                              <span className="detail-team-name">{matchup.a.name}</span>
-                            </span>
-                            <span className="detail-vs">vs</span>
-                            <span className="detail-team">
-                              {renderFlag(matchup.b)}
-                              <span className="detail-team-name">{matchup.b.name}</span>
-                            </span>
-                          </div>
+                        <td className="detail-game-team-a-cell">
+                          <span className="detail-team detail-team-a">
+                            {renderFlag(matchup.a)}
+                            <span className="detail-team-name">{matchup.a.name}</span>
+                          </span>
                         </td>
-                        <td>
+                        <td className="detail-game-vs-cell" data-testid="detail-matchup">
+                          <span className="detail-vs">vs</span>
+                        </td>
+                        <td className="detail-game-team-b-cell">
+                          <span className="detail-team detail-team-b">
+                            {renderFlag(matchup.b)}
+                            <span className="detail-team-name">{matchup.b.name}</span>
+                          </span>
+                        </td>
+                        <td className="detail-center-col">
                           {match.official.a} x {match.official.b}
                         </td>
-                        <td>
+                        <td className="detail-center-col">
                           {match.predicted?.a ?? '-'} x {match.predicted?.b ?? '-'}
                         </td>
                         <td>
                           {match.ruleApplied}
                           {match.indicationPoints > 0 ? ' + Indicacao' : ''}
                         </td>
-                        <td className="detail-points-cell">{match.totalPoints}</td>
+                        <td className="detail-points-cell detail-center-col">{match.totalPoints}</td>
                       </tr>
                     ))}
                   </tbody>
