@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Team, Match, GroupStanding } from '../types';
+import { Team, Match } from '../types';
 import { calculateGroupStandings } from '../services/simulator';
 
 interface GroupCardProps {
@@ -12,124 +11,129 @@ interface GroupCardProps {
   officialScores?: Record<string, { a: number | null; b: number | null }>;
 }
 
-const FlagImage: React.FC<{ iso2: string; name: string; size?: string }> = ({ iso2, name, size = "w-6 h-4" }) => (
-  <img 
-    src={`https://flagcdn.com/${iso2.toLowerCase()}.svg`} 
-    alt={name}
-    className={`${size} object-cover rounded-sm shadow-sm border border-slate-200 shrink-0`}
-  />
+const FlagImage: React.FC<{ iso2: string; name: string }> = ({ iso2, name }) => (
+  <span className="pv-flag-wrap" aria-label={`Bandeira ${name}`}>
+    <img
+      src={`https://flagcdn.com/w20/${iso2.toLowerCase().startsWith('gb-') ? 'gb' : iso2.toLowerCase()}.png`}
+      srcSet={`https://flagcdn.com/w40/${iso2.toLowerCase().startsWith('gb-') ? 'gb' : iso2.toLowerCase()}.png 2x`}
+      alt={`Bandeira ${name}`}
+      className="pv-flag"
+      loading="lazy"
+      onError={(event) => {
+        event.currentTarget.style.display = 'none';
+        const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+        if (fallback) fallback.style.display = 'inline-flex';
+      }}
+    />
+    <span className="pv-flag-fallback">{iso2.toUpperCase().slice(0, 2)}</span>
+  </span>
 );
 
-const GroupCard: React.FC<GroupCardProps> = ({ groupLetter, teams, matches, onScoreChange, predictionsLocked = false, officialScores }) => {
+const GroupCard: React.FC<GroupCardProps> = ({
+  groupLetter,
+  teams,
+  matches,
+  onScoreChange,
+  predictionsLocked = false,
+  officialScores
+}) => {
   const standings = calculateGroupStandings(teams, matches);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all hover:shadow-md">
-      <div className="bg-indigo-600 px-4 py-3 flex justify-between items-center">
-        <h3 className="text-lg font-bold text-white uppercase tracking-wider">Grupo {groupLetter}</h3>
-      </div>
-      
-      <div className="p-4 flex flex-col lg:flex-row gap-6">
-        {/* Matches Section - 2/3 of width */}
-        <div className="lg:flex-[2] space-y-3">
-          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jogos</h4>
-          {matches.map(match => {
-            const teamA = teams.find(t => t.id === match.teamA);
-            const teamB = teams.find(t => t.id === match.teamB);
-            const official = officialScores?.[match.id];
-            const hasOfficial = official && official.a !== null && official.b !== null;
-            return (
-              <div key={match.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors min-h-[72px]">
-                {/* Team A - Right Aligned */}
-                <div className="flex items-center gap-2.5 flex-1 justify-end min-w-0">
-                  <span className="text-xs font-bold text-slate-700 leading-tight text-right">
-                    {teamA?.name}
-                  </span>
-                  {teamA && <FlagImage iso2={teamA.iso2} name={teamA.name} size="w-7 h-5" />}
-                </div>
-                
-                {/* Score Inputs */}
-                <div className="flex flex-col items-center gap-1.5 shrink-0">
-                  <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={match.scoreA === null ? '' : match.scoreA}
-                    onChange={(e) => onScoreChange(match.id, 'A', e.target.value)}
-                    disabled={predictionsLocked}
-                    className="w-10 h-10 text-center bg-white border border-slate-200 rounded-lg font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
-                  <span className="text-slate-300 font-black text-[10px]">VS</span>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={match.scoreB === null ? '' : match.scoreB}
-                    onChange={(e) => onScoreChange(match.id, 'B', e.target.value)}
-                    disabled={predictionsLocked}
-                    className="w-10 h-10 text-center bg-white border border-slate-200 rounded-lg font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
-                  </div>
-                  {predictionsLocked && (
-                    <div className="text-[10px] font-bold text-slate-500 text-center">
-                      <div>Seu palpite: {match.scoreA ?? '-'} x {match.scoreB ?? '-'}</div>
-                      <div className="text-indigo-600">Oficial: {hasOfficial ? `${official!.a} x ${official!.b}` : '-'}</div>
-                    </div>
-                  )}
-                </div>
+    <article className="pv-group-card" data-testid={`group-card-${groupLetter}`}>
+      <header className="pv-group-head">
+        <h3 className="pv-group-title">Grupo {groupLetter}</h3>
+        <span className="pv-group-chip">{matches.length} jogos</span>
+      </header>
 
-                {/* Team B - Left Aligned */}
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  {teamB && <FlagImage iso2={teamB.iso2} name={teamB.name} size="w-7 h-5" />}
-                  <span className="text-xs font-bold text-slate-700 leading-tight text-left">
-                    {teamB?.name}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Standings Table - 1/3 of width */}
-        <div className="lg:flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Classificação</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-400 font-medium">
-                  <th className="text-left pb-2">Seleção</th>
-                  <th className="text-center pb-2">P</th>
-                  <th className="text-center pb-2">SG</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {standings.map((s, idx) => {
-                  const team = teams.find(t => t.id === s.teamId);
-                  const isQualifyingPos = idx < 2;
-                  const hasPlayed = s.played > 0;
-                  const showIndicator = isQualifyingPos && hasPlayed;
-                  
-                  return (
-                    <tr key={s.teamId} className={showIndicator ? "bg-white/50" : ""}>
-                      <td className="py-2.5 flex items-center gap-2 min-w-0">
-                        <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${showIndicator ? "bg-green-500" : "bg-slate-300"}`}></span>
-                        {team && <FlagImage iso2={team.iso2} name={team.name} size="w-5 h-3.5" />}
-                        <span className={`font-bold leading-tight ${showIndicator ? "text-slate-900" : "text-slate-500"}`}>
-                          {team?.name}
-                        </span>
-                      </td>
-                      <td className="text-center font-black text-indigo-600">{s.points}</td>
-                      <td className="text-center text-slate-600 font-medium">{s.goalsDifference}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      <div className="pv-group-body">
+        <section className="pv-group-matches">
+          <div className="pv-table-head">
+            <span>Confronto</span>
+            <span>Placar</span>
           </div>
-        </div>
+
+          <div className="pv-match-list">
+            {matches.map((match) => {
+              const teamA = teams.find((team) => team.id === match.teamA);
+              const teamB = teams.find((team) => team.id === match.teamB);
+              const official = officialScores?.[match.id];
+              const hasOfficial = official && official.a !== null && official.b !== null;
+
+              return (
+                <div key={match.id} className="pv-match-row" data-testid="group-match-row">
+                  <div className="pv-team-cell pv-team-cell-right">
+                    <span className="pv-team-name">{teamA?.name}</span>
+                    {teamA && <FlagImage iso2={teamA.iso2} name={teamA.name} />}
+                  </div>
+
+                  <div className="pv-score-cell">
+                    <div className="pv-score-inline">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={match.scoreA === null ? '' : match.scoreA}
+                        onChange={(event) => onScoreChange(match.id, 'A', event.target.value)}
+                        disabled={predictionsLocked}
+                        className="pv-score-input"
+                      />
+                      <span className="pv-score-sep">x</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={match.scoreB === null ? '' : match.scoreB}
+                        onChange={(event) => onScoreChange(match.id, 'B', event.target.value)}
+                        disabled={predictionsLocked}
+                        className="pv-score-input"
+                      />
+                    </div>
+                    {predictionsLocked && (
+                      <div className="pv-lock-meta">
+                        <span>Seu palpite: {match.scoreA ?? '-'} x {match.scoreB ?? '-'}</span>
+                        <span>Oficial: {hasOfficial ? `${official!.a} x ${official!.b}` : '-'}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pv-team-cell">
+                    {teamB && <FlagImage iso2={teamB.iso2} name={teamB.name} />}
+                    <span className="pv-team-name">{teamB?.name}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <aside className="pv-group-standings">
+          <div className="pv-table-head pv-table-head-standings">
+            <span>Classificacao</span>
+            <span>P</span>
+            <span>SG</span>
+          </div>
+
+          <div className="pv-standings-list">
+            {standings.map((standing, index) => {
+              const team = teams.find((item) => item.id === standing.teamId);
+              const isQualified = index < 2 && standing.played > 0;
+              return (
+                <div key={standing.teamId} className={`pv-standings-row ${isQualified ? 'is-qualified' : ''}`}>
+                  <div className="pv-standings-team">
+                    <span className={`pv-dot ${isQualified ? 'is-on' : ''}`} />
+                    {team && <FlagImage iso2={team.iso2} name={team.name} />}
+                    <span className="pv-team-name">{team?.name}</span>
+                  </div>
+                  <div className="pv-standings-points">{standing.points}</div>
+                  <div className="pv-standings-sg">{standing.goalsDifference}</div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
       </div>
-    </div>
+    </article>
   );
 };
 

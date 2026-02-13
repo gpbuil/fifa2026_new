@@ -9,6 +9,7 @@ import KnockoutBracket from './components/KnockoutBracket';
 import AdminDashboard from './components/AdminDashboard';
 import RankingView from './components/RankingView';
 import { getAdvancedTeams, calculateGroupStandings } from './services/simulator';
+import './components/prediction-view.css';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -87,7 +88,7 @@ const App: React.FC = () => {
       setMatches(updatedGroup);
       setKnockoutScores(scores);
     } catch (e) { 
-      console.warn("Sem palpites salvos ou erro:", e);
+      console.warn("Sem resultados salvos ou erro:", e);
       setMatches(initMatches());
     }
   }, [initMatches]);
@@ -657,20 +658,49 @@ const App: React.FC = () => {
             <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
               RANKING
             </a>
-            <button onClick={() => setView(ViewMode.GROUPS)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
-            <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
+            <button onClick={() => setView(ViewMode.GROUPS)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
+            <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
           </div>
           <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
         </div>
       </nav>
-      <main className="max-w-[1600px] mx-auto px-4 py-8">
+      <main className="prediction-shell max-w-[1600px] mx-auto px-4 py-8">
+        <section className="prediction-top-card">
+          <div>
+            <p className="prediction-kicker">Copa 2026</p>
+            <h2 className="prediction-title">Entrada de Resultados</h2>
+            <p className="prediction-subtitle">Layout condensado para preencher jogos com mais velocidade.</p>
+          </div>
+          <div className="prediction-chips">
+            <span className="prediction-chip">Grupos: {GROUPS.length}</span>
+            <span className="prediction-chip">Mata-mata: {knockoutMatches.length} jogos</span>
+            <span className="prediction-chip">{predictionsLocked ? 'Resultados bloqueados' : 'Resultados abertos'}</span>
+          </div>
+        </section>
+
+        <div className="prediction-mobile-tabs" data-testid="prediction-mobile-tabs">
+          <button
+            type="button"
+            className={`prediction-mobile-tab ${view === ViewMode.GROUPS ? 'is-active' : ''}`}
+            onClick={() => setView(ViewMode.GROUPS)}
+          >
+            Grupos
+          </button>
+          <button
+            type="button"
+            className={`prediction-mobile-tab ${view === ViewMode.KNOCKOUT ? 'is-active' : ''}`}
+            onClick={() => setView(ViewMode.KNOCKOUT)}
+          >
+            Mata-mata
+          </button>
+        </div>
         {predictionsLocked && (
           <div className="mb-6 bg-amber-50 border border-amber-100 text-amber-700 text-sm font-semibold rounded-xl px-4 py-3">
-            Palpites encerrados. Agora vocÃª acompanha a comparaÃ§Ã£o com os resultados oficiais.
+            Resultados encerrados. Agora vocÃª acompanha a comparaÃ§Ã£o com os resultados oficiais.
           </div>
         )}
         {view === ViewMode.GROUPS ? (
-           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+           <div className="pv-groups-grid">
               {GROUPS.map(g => (
                 <GroupCard
                   key={g}
