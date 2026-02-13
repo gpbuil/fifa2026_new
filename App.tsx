@@ -740,7 +740,7 @@ const App: React.FC = () => {
         </div>
         {predictionsLocked && (
           <div className="mb-6 bg-amber-50 border border-amber-100 text-amber-700 text-sm font-semibold rounded-xl px-4 py-3">
-            Resultados encerrados. Agora vocÃª acompanha a comparaÃ§Ã£o com os resultados oficiais.
+            Resultados encerrados. Acompanhe a comparação de resultados abaixo!
           </div>
         )}
         {view === ViewMode.GROUPS ? (

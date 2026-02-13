@@ -65,6 +65,39 @@ const TeamLine: React.FC<{
   );
 };
 
+const ComparisonTeamRow: React.FC<{
+  teamId: string;
+  officialScore: number | null | undefined;
+  predictedScore: number | null | undefined;
+  resolve: (id: string) => { team?: Team; label: string };
+}> = ({ teamId, officialScore, predictedScore, resolve }) => {
+  const { team, label } = resolve(teamId);
+
+  return (
+    <div className="pv-ko-compare-row" data-testid="ko-compare-row">
+      <div className="pv-ko-compare-team">
+        {team ? (
+          <>
+            <FlagImage iso2={team.iso2} name={team.name} />
+            <span className="pv-team-name">{team.name}</span>
+          </>
+        ) : (
+          <>
+            <span className="pv-placeholder-slot">?</span>
+            <span className="pv-placeholder-label">{label}</span>
+          </>
+        )}
+      </div>
+      <div className="pv-ko-compare-cell is-center" data-testid="ko-compare-official">
+        {officialScore ?? '-'}
+      </div>
+      <div className="pv-ko-compare-cell is-center" data-testid="ko-compare-predicted">
+        {predictedScore ?? '-'}
+      </div>
+    </div>
+  );
+};
+
 const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
   knockoutMatches,
   onScoreChange,
@@ -91,38 +124,58 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
               .sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10))
               .map((match) => {
                 const official = officialScores?.[match.id];
-                const hasOfficial = official && official.a !== null && official.b !== null;
                 const isFinal = match.id === '104';
                 const isThird = match.id === '103';
                 return (
-                  <div key={match.id} className={`pv-ko-match ${isFinal ? 'is-final' : ''} ${isThird ? 'is-third' : ''}`}>
+                  <div
+                    key={match.id}
+                    className={`pv-ko-match ${isFinal ? 'is-final' : ''} ${isThird ? 'is-third' : ''}`}
+                    data-testid={predictionsLocked ? 'ko-compare-card' : undefined}
+                  >
                     <div className="pv-ko-match-meta">
                       <span className="pv-ko-match-tag">
-                        {isFinal ? 'Grande Final' : isThird ? 'Disputa 3º' : `Jogo ${match.id}`}
+                        {isFinal ? 'Grande Final' : isThird ? 'Disputa 3o' : `Jogo ${match.id}`}
                       </span>
                       <span className="pv-ko-match-venue">{match.venue}</span>
                     </div>
 
-                    <TeamLine
-                      teamId={match.teamA}
-                      score={match.scoreA}
-                      onScoreChange={(value) => onScoreChange(match.id, 'A', value)}
-                      resolve={resolvePlaceholder}
-                      disabled={predictionsLocked}
-                    />
-                    <TeamLine
-                      teamId={match.teamB}
-                      score={match.scoreB}
-                      onScoreChange={(value) => onScoreChange(match.id, 'B', value)}
-                      resolve={resolvePlaceholder}
-                      disabled={predictionsLocked}
-                    />
-
-                    {predictionsLocked && (
-                      <div className="pv-lock-meta pv-lock-meta-ko">
-                        <span>Seu palpite: {match.scoreA ?? '-'} x {match.scoreB ?? '-'}</span>
-                        <span>Oficial: {hasOfficial ? `${official!.a} x ${official!.b}` : '-'}</span>
+                    {predictionsLocked ? (
+                      <div className="pv-ko-compare-grid">
+                        <div className="pv-ko-compare-head">
+                          <span>Time</span>
+                          <span className="is-center">Res.Ofic</span>
+                          <span className="is-center">Palpite</span>
+                        </div>
+                        <ComparisonTeamRow
+                          teamId={match.teamA}
+                          officialScore={official?.a}
+                          predictedScore={match.scoreA}
+                          resolve={resolvePlaceholder}
+                        />
+                        <ComparisonTeamRow
+                          teamId={match.teamB}
+                          officialScore={official?.b}
+                          predictedScore={match.scoreB}
+                          resolve={resolvePlaceholder}
+                        />
                       </div>
+                    ) : (
+                      <>
+                        <TeamLine
+                          teamId={match.teamA}
+                          score={match.scoreA}
+                          onScoreChange={(value) => onScoreChange(match.id, 'A', value)}
+                          resolve={resolvePlaceholder}
+                          disabled={predictionsLocked}
+                        />
+                        <TeamLine
+                          teamId={match.teamB}
+                          score={match.scoreB}
+                          onScoreChange={(value) => onScoreChange(match.id, 'B', value)}
+                          resolve={resolvePlaceholder}
+                          disabled={predictionsLocked}
+                        />
+                      </>
                     )}
                   </div>
                 );

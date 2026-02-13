@@ -33,6 +33,9 @@ test.describe('prediction input ui', () => {
 
     await page.getByRole('button', { name: 'MATA-MATA' }).click();
     await expect(page.getByTestId('knockout-grid')).toBeVisible();
+    if (await blockedGrid.count()) {
+      await expect(page.getByTestId('ko-compare-card').first()).toBeVisible();
+    }
   });
 
   test('mobile tabs switch between groups and knockout', async ({ page }) => {
@@ -60,5 +63,8 @@ test.describe('prediction input ui', () => {
 
     await page.getByRole('button', { name: 'Mata-mata' }).click();
     await expect(page.getByTestId('knockout-grid')).toBeVisible();
+    if (await blockedGrid.count()) {
+      await expect(page.getByTestId('ko-compare-card').first()).toBeVisible();
+    }
   });
 });
