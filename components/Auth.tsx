@@ -108,10 +108,10 @@ useEffect(() => {
     }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+  const handleSocialLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({ 
-        provider,
+        provider: 'google',
         options: { redirectTo: `${APP_URL}/` },
       });
       if (error) throw error;
@@ -337,14 +337,10 @@ useEffect(() => {
               <div className="flex-grow border-t border-slate-200"></div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => handleSocialLogin('google')} className="flex items-center justify-center py-2 px-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors gap-2">
+            <div>
+              <button onClick={handleSocialLogin} className="w-full flex items-center justify-center py-2 px-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors gap-2">
                 <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
                 <span className="text-sm font-bold text-slate-700">Google</span>
-              </button>
-              <button onClick={() => handleSocialLogin('facebook')} className="flex items-center justify-center py-2 px-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors gap-2">
-                <img src="https://www.facebook.com/favicon.ico" className="w-4 h-4" alt="FB" />
-                <span className="text-sm font-bold text-slate-700">Facebook</span>
               </button>
             </div>
           </div>
