@@ -1,20 +1,85 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# FIFA 2026 Bolao
 
-# Run and deploy your AI Studio app
+Aplicacao React + Supabase para palpites e ranking.
 
-This contains everything you need to run your app locally.
+## Estrutura
 
-View your app in AI Studio: https://ai.studio/apps/drive/1ltPP7N7vpCgKOH7HXyXTImqIAiwO4D-h
+- frontend React/Vite
+- migrations e configuracao do Supabase em [`supabase/`](./supabase)
+- tipos do banco em [`supabase/database.types.ts`](./supabase/database.types.ts)
 
-## Run Locally
+## Ambientes
 
-**Prerequisites:**  Node.js
+- local: usa [`.env.local`](./.env.local) e `npx supabase start`
+- dev remoto: usa variaveis do projeto Supabase de homologacao
+- prod: usa variaveis do projeto Supabase de producao
 
+Modelos de variaveis:
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- [`.env.example`](./.env.example)
+- [`.env.dev.example`](./.env.dev.example)
+- [`.env.prod.example`](./.env.prod.example)
+
+## Desenvolvimento local
+
+1. Instale dependencias:
+
+```bash
+npm install
+```
+
+2. Suba o Supabase local:
+
+```bash
+npm run supabase:start
+```
+
+3. Rode o frontend:
+
+```bash
+npm run dev
+```
+
+4. Valide o build:
+
+```bash
+npm run build
+```
+
+## Desenvolvimento com Docker
+
+Suba o frontend em container:
+
+```bash
+docker compose up --build app
+```
+
+O app fica em `http://localhost:3100` e usa as variaveis de [`.env.local`](./.env.local).
+
+Para parar:
+
+```bash
+docker compose down
+```
+
+Para validar a imagem de producao:
+
+```bash
+docker compose --profile prod up --build app-prod
+```
+
+A versao estatica fica em `http://localhost:8180`.
+
+## Banco e Supabase
+
+Scripts uteis:
+
+- `npm run supabase:start`
+- `npm run supabase:stop`
+- `npm run supabase:status`
+- `npm run supabase:reset`
+- `npm run supabase:types`
+
+Guia completo do fluxo `dev -> prod`:
+
+- [`docs/deployment-workflow.md`](./docs/deployment-workflow.md)
