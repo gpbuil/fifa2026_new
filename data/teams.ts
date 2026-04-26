@@ -6,12 +6,12 @@ export const TEAMS_DATA: Team[] = [
   { id: 'MEX', name: 'México', flag: '🇲🇽', iso2: 'mx', group: 'A' },
   { id: 'RSA', name: 'África do Sul', flag: '🇿🇦', iso2: 'za', group: 'A' },
   { id: 'KOR', name: 'Coreia do Sul', flag: '🇰🇷', iso2: 'kr', group: 'A' },
-  { id: 'UEFA_D', name: 'Repescagem UEFA D', flag: '🇪🇺', iso2: 'eu', group: 'A' },
+  { id: 'UEFA_D', name: 'Tchecoslováquia', flag: '🇨🇿', iso2: 'cz', group: 'A' },
   // Group B
   { id: 'CAN', name: 'Canadá', flag: '🇨🇦', iso2: 'ca', group: 'B' },
   { id: 'QAT', name: 'Catar', flag: '🇶🇦', iso2: 'qa', group: 'B' },
   { id: 'SUI', name: 'Suíça', flag: '🇨🇭', iso2: 'ch', group: 'B' },
-  { id: 'UEFA_A', name: 'Repescagem UEFA A', flag: '🇪🇺', iso2: 'eu', group: 'B' },
+  { id: 'UEFA_A', name: 'Bósnia e Herzegovina', flag: '🇧🇦', iso2: 'ba', group: 'B' },
   // Group C
   { id: 'BRA', name: 'Brasil', flag: '🇧🇷', iso2: 'br', group: 'C' },
   { id: 'MAR', name: 'Marrocos', flag: '🇲🇦', iso2: 'ma', group: 'C' },
@@ -21,7 +21,7 @@ export const TEAMS_DATA: Team[] = [
   { id: 'USA', name: 'Estados Unidos', flag: '🇺🇸', iso2: 'us', group: 'D' },
   { id: 'PAR', name: 'Paraguai', flag: '🇵🇾', iso2: 'py', group: 'D' },
   { id: 'AUS', name: 'Austrália', flag: '🇦🇺', iso2: 'au', group: 'D' },
-  { id: 'UEFA_C', name: 'Repescagem UEFA C', flag: '🇪🇺', iso2: 'eu', group: 'D' },
+  { id: 'UEFA_C', name: 'Turquia', flag: '🇹🇷', iso2: 'tr', group: 'D' },
   // Group E
   { id: 'GER', name: 'Alemanha', flag: '🇩🇪', iso2: 'de', group: 'E' },
   { id: 'ECU', name: 'Equador', flag: '🇪🇨', iso2: 'ec', group: 'E' },
@@ -31,7 +31,7 @@ export const TEAMS_DATA: Team[] = [
   { id: 'NED', name: 'Holanda', flag: '🇳🇱', iso2: 'nl', group: 'F' },
   { id: 'JPN', name: 'Japão', flag: '🇯🇵', iso2: 'jp', group: 'F' },
   { id: 'TUN', name: 'Tunísia', flag: '🇹🇳', iso2: 'tn', group: 'F' },
-  { id: 'UEFA_F', name: 'Repescagem UEFA F', flag: '🇪🇺', iso2: 'eu', group: 'F' },
+  { id: 'UEFA_F', name: 'Suécia', flag: '🇸🇪', iso2: 'se', group: 'F' },
   // Group G
   { id: 'BEL', name: 'Bélgica', flag: '🇧🇪', iso2: 'be', group: 'G' },
   { id: 'EGY', name: 'Egito', flag: '🇪🇬', iso2: 'eg', group: 'G' },
@@ -46,7 +46,7 @@ export const TEAMS_DATA: Team[] = [
   { id: 'FRA', name: 'França', flag: '🇫🇷', iso2: 'fr', group: 'I' },
   { id: 'SEN', name: 'Senegal', flag: '🇸🇳', iso2: 'sn', group: 'I' },
   { id: 'NOR', name: 'Noruega', flag: '🇳🇴', iso2: 'no', group: 'I' },
-  { id: 'INTER_2', name: 'Repescagem Inter. 2', flag: '🇺🇳', iso2: 'un', group: 'I' },
+  { id: 'INTER_2', name: 'Iraque', flag: '🇮🇶', iso2: 'iq', group: 'I' },
   // Group J
   { id: 'ARG', name: 'Argentina', flag: '🇦🇷', iso2: 'ar', group: 'J' },
   { id: 'AUT', name: 'Áustria', flag: '🇦🇹', iso2: 'at', group: 'J' },
@@ -56,7 +56,7 @@ export const TEAMS_DATA: Team[] = [
   { id: 'POR', name: 'Portugal', flag: '🇵🇹', iso2: 'pt', group: 'K' },
   { id: 'COL', name: 'Colômbia', flag: '🇨🇴', iso2: 'co', group: 'K' },
   { id: 'UZB', name: 'Uzbequistão', flag: '🇺🇿', iso2: 'uz', group: 'K' },
-  { id: 'INTER_1', name: 'Repescagem Inter. 1', flag: '🇺🇳', iso2: 'un', group: 'K' },
+  { id: 'INTER_1', name: 'RD Congo', flag: '🇨🇩', iso2: 'cd', group: 'K' },
   // Group L
   { id: 'ENG', name: 'Inglaterra', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', iso2: 'gb-eng', group: 'L' },
   { id: 'CRO', name: 'Croácia', flag: '🇭🇷', iso2: 'hr', group: 'L' },

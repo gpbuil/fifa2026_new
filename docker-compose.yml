@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    container_name: fifa2026-app
+    env_file:
+      - .env.local
+    ports:
+      - "3100:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+  app-prod:
+    profiles:
+      - prod
+    build:
+      context: .
+      target: prod
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://127.0.0.1:56321}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+    container_name: fifa2026-app-prod
+    ports:
+      - "8180:80"
