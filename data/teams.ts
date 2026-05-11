@@ -6,7 +6,7 @@ export const TEAMS_DATA: Team[] = [
   { id: 'MEX', name: 'México', flag: '🇲🇽', iso2: 'mx', group: 'A' },
   { id: 'RSA', name: 'África do Sul', flag: '🇿🇦', iso2: 'za', group: 'A' },
   { id: 'KOR', name: 'Coreia do Sul', flag: '🇰🇷', iso2: 'kr', group: 'A' },
-  { id: 'UEFA_D', name: 'Tchecoslováquia', flag: '🇨🇿', iso2: 'cz', group: 'A' },
+  { id: 'UEFA_D', name: 'República Tcheca', flag: '🇨🇿', iso2: 'cz', group: 'A' },
   // Group B
   { id: 'CAN', name: 'Canadá', flag: '🇨🇦', iso2: 'ca', group: 'B' },
   { id: 'QAT', name: 'Catar', flag: '🇶🇦', iso2: 'qa', group: 'B' },

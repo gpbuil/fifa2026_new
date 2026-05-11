@@ -776,8 +776,8 @@ const App: React.FC = () => {
                                     {row.teamA && (
                                       <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamA.name}`}>
                                         <img
-                                          src={`https://flagcdn.com/w20/${row.teamA.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamA.iso2.toLowerCase()}.png`}
-                                          srcSet={`https://flagcdn.com/w40/${row.teamA.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamA.iso2.toLowerCase()}.png 2x`}
+                                          src={`https://flagcdn.com/w20/${row.teamA.iso2.toLowerCase()}.png`}
+                                          srcSet={`https://flagcdn.com/w40/${row.teamA.iso2.toLowerCase()}.png 2x`}
                                           alt={`Bandeira ${row.teamA.name}`}
                                           className="pv-flag"
                                           loading="lazy"
@@ -797,8 +797,8 @@ const App: React.FC = () => {
                                     {row.teamB && (
                                       <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamB.name}`}>
                                         <img
-                                          src={`https://flagcdn.com/w20/${row.teamB.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamB.iso2.toLowerCase()}.png`}
-                                          srcSet={`https://flagcdn.com/w40/${row.teamB.iso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamB.iso2.toLowerCase()}.png 2x`}
+                                          src={`https://flagcdn.com/w20/${row.teamB.iso2.toLowerCase()}.png`}
+                                          srcSet={`https://flagcdn.com/w40/${row.teamB.iso2.toLowerCase()}.png 2x`}
                                           alt={`Bandeira ${row.teamB.name}`}
                                           className="pv-flag"
                                           loading="lazy"
@@ -846,8 +846,8 @@ const App: React.FC = () => {
                                   {row.teamIso2 ? (
                                     <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamName}`}>
                                       <img
-                                        src={`https://flagcdn.com/w20/${row.teamIso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamIso2.toLowerCase()}.png`}
-                                        srcSet={`https://flagcdn.com/w40/${row.teamIso2.toLowerCase().startsWith('gb-') ? 'gb' : row.teamIso2.toLowerCase()}.png 2x`}
+                                        src={`https://flagcdn.com/w20/${row.teamIso2.toLowerCase()}.png`}
+                                        srcSet={`https://flagcdn.com/w40/${row.teamIso2.toLowerCase()}.png 2x`}
                                         alt={`Bandeira ${row.teamName}`}
                                         className="pv-flag"
                                         loading="lazy"

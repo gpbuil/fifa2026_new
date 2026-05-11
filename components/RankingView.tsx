@@ -108,7 +108,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
 
   const normalizeFlagCode = useCallback((iso2: string): string | null => {
     const normalized = iso2.toLowerCase();
-    if (normalized.startsWith('gb-')) return 'gb';
+    if (normalized === 'gb-eng' || normalized === 'gb-sct') return normalized;
     if (/^[a-z]{2}$/.test(normalized)) return normalized;
     if (normalized === 'eu' || normalized === 'un') return normalized;
     return null;

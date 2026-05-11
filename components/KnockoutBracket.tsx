@@ -13,8 +13,8 @@ interface KnockoutBracketProps {
 const FlagImage: React.FC<{ iso2: string; name: string }> = ({ iso2, name }) => (
   <span className="pv-flag-wrap" aria-label={`Bandeira ${name}`}>
     <img
-      src={`https://flagcdn.com/w20/${iso2.toLowerCase().startsWith('gb-') ? 'gb' : iso2.toLowerCase()}.png`}
-      srcSet={`https://flagcdn.com/w40/${iso2.toLowerCase().startsWith('gb-') ? 'gb' : iso2.toLowerCase()}.png 2x`}
+      src={`https://flagcdn.com/w20/${iso2.toLowerCase()}.png`}
+      srcSet={`https://flagcdn.com/w40/${iso2.toLowerCase()}.png 2x`}
       alt={`Bandeira ${name}`}
       className="pv-flag"
       loading="lazy"
