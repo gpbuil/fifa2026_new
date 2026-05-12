@@ -4,6 +4,20 @@ import { supabase } from '../supabase';
 
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset-password';
 
+const PASSWORD_RESET_DELIVERY_ERROR =
+  'Nao foi possivel enviar o link agora. Confira as configuracoes de e-mail do Supabase e tente novamente.';
+
+const getAuthErrorMessage = (error: any): string => {
+  const status = error?.status;
+  const message = String(error?.message ?? 'Erro inesperado.');
+
+  if (status >= 500 || message.toLowerCase().includes('internal server error')) {
+    return PASSWORD_RESET_DELIVERY_ERROR;
+  }
+
+  return message;
+};
+
 const Auth: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,7 +93,7 @@ useEffect(() => {
       }
       else if (mode === 'forgot') {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${APP_URL}/`,
+          redirectTo: APP_URL,
         });
         
         if (resetError) throw resetError;
@@ -102,7 +116,7 @@ useEffect(() => {
         setTimeout(() => setMode('login'), 2000);
       }
     } catch (error: any) {
-      setErrorMessage(error.message);
+      setErrorMessage(getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }

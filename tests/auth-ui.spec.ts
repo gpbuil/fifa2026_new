@@ -37,3 +37,40 @@ test('reset password form shows toggles for both fields', async ({ page }) => {
   await expect(page.getByTestId('password-toggle')).toHaveCount(1);
   await expect(page.getByTestId('confirm-password-toggle')).toHaveCount(1);
 });
+
+test('forgot password uses the exact app origin and hides Supabase 500 details', async ({ page }) => {
+  let recoverUrl = '';
+
+  await page.route('https://rtjozxqtrcsjnryurxkf.supabase.co/auth/v1/recover**', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-headers': '*',
+          'access-control-allow-methods': 'POST, OPTIONS',
+        },
+      });
+      return;
+    }
+
+    recoverUrl = route.request().url();
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      headers: {
+        'access-control-allow-origin': '*',
+      },
+      body: JSON.stringify({ message: 'Internal Server Error' }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /Esqueceu a senha\?/i }).click();
+  await page.getByPlaceholder('seu@email.com').fill('usuario@example.com');
+  await page.getByRole('button', { name: /Enviar Link de Recupera/i }).click();
+
+  await expect(page.getByText(/Nao foi possivel enviar o link agora/i)).toBeVisible();
+  expect(recoverUrl).toContain('redirect_to=http%3A%2F%2Flocalhost%3A5173');
+  expect(recoverUrl).not.toContain('redirect_to=http%3A%2F%2Flocalhost%3A5173%2F');
+});
