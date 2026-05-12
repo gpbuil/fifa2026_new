@@ -82,3 +82,7 @@ No Supabase, manter o mesmo Client ID e Client Secret configurados no provider G
 4. Definir uma nova senha.
 5. Entrar com a nova senha.
 6. Repetir com login Google.
+
+
+## Resend
+Utiliza conta ginesplanasbuilusa@gmail.com
