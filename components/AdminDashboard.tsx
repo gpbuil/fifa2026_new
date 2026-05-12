@@ -12,6 +12,7 @@ interface AdminDashboardProps {
   officialResults: ScoreMap;
   onToggleLock: (next: boolean) => Promise<void>;
   onSaveOfficial: (matchId: string, scoreA: number, scoreB: number) => Promise<void>;
+  onClearOfficialResults: () => Promise<void>;
   groupMatches: Match[];
   knockoutMatches: Match[];
   resolvePlaceholder: (id: string) => { team?: Team; label: string };
@@ -26,6 +27,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   officialResults,
   onToggleLock,
   onSaveOfficial,
+  onClearOfficialResults,
   groupMatches,
   knockoutMatches,
   resolvePlaceholder,
@@ -35,6 +37,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [drafts, setDrafts] = useState<ScoreMap>({});
   const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
+  const [clearingResults, setClearingResults] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const officialResultsCount = Object.keys(officialResults).length;
 
   useEffect(() => {
     setDrafts(officialResults);
@@ -54,6 +59,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { title: 'Semis', matches: knockoutMatches.filter(m => m.id === '101' || m.id === '102') },
     { title: 'Finais', matches: knockoutMatches.filter(m => m.id === '103' || m.id === '104') }
   ], [knockoutMatches]);
+
+  const handleClearOfficialResults = async () => {
+    setClearError(null);
+    const confirmed = window.confirm(
+      `Limpar ${officialResultsCount} resultado(s) oficial(is)? Essa acao remove os placares oficiais e recalcula o ranking sem resultados.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setClearingResults(true);
+      await onClearOfficialResults();
+      setDrafts({});
+    } catch (error) {
+      console.error(error);
+      setClearError('Nao foi possivel limpar os resultados oficiais. Verifique as permissoes no Supabase.');
+    } finally {
+      setClearingResults(false);
+    }
+  };
 
   if (!isAdmin) {
     return (
@@ -76,16 +100,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <p className="text-slate-600 text-sm">
             Bloqueie resultados globais e atualize os resultados oficiais.
           </p>
+          {clearError && (
+            <p className="mt-2 text-xs font-bold text-red-600">
+              {clearError}
+            </p>
+          )}
         </div>
-        <button
-          onClick={() => predictionsLocked !== null && onToggleLock(!predictionsLocked)}
-          className={`px-5 py-3 rounded-xl font-bold text-sm transition-all ${
-            predictionsLocked ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'
-          }`}
-          disabled={predictionsLocked === null}
-        >
-          {predictionsLocked === null ? 'Carregando...' : predictionsLocked ? 'Desbloquear resultados' : 'Bloquear resultados'}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={handleClearOfficialResults}
+            className="px-5 py-3 rounded-xl font-bold text-sm transition-all border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={officialResultsCount === 0 || clearingResults}
+          >
+            {clearingResults ? 'Limpando...' : `Limpar oficiais (${officialResultsCount})`}
+          </button>
+          <button
+            onClick={() => predictionsLocked !== null && onToggleLock(!predictionsLocked)}
+            className={`px-5 py-3 rounded-xl font-bold text-sm transition-all ${
+              predictionsLocked ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+            }`}
+            disabled={predictionsLocked === null}
+          >
+            {predictionsLocked === null ? 'Carregando...' : predictionsLocked ? 'Desbloquear resultados' : 'Bloquear resultados'}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">

@@ -355,6 +355,22 @@ const App: React.FC = () => {
     }
   };
 
+  const clearOfficialResults = async () => {
+    if (!session?.user?.id || !isAdmin) return;
+    try {
+      const { error } = await supabase
+        .from('official_results')
+        .delete()
+        .neq('match_id', '');
+
+      if (error) throw error;
+      setOfficialResults({});
+    } catch (e) {
+      console.error("Erro ao limpar resultados oficiais:", e);
+      throw e;
+    }
+  };
+
   const teamById = useMemo(() => {
     const map = new Map<string, typeof TEAMS_DATA[number]>();
     TEAMS_DATA.forEach(t => map.set(t.id, t));
@@ -646,6 +662,7 @@ const App: React.FC = () => {
             officialResults={officialResults}
             onToggleLock={updatePredictionsLocked}
             onSaveOfficial={saveOfficialResult}
+            onClearOfficialResults={clearOfficialResults}
             groupMatches={matches}
             knockoutMatches={knockoutMatches}
             resolvePlaceholder={resolveOfficialPlaceholder}
