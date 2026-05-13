@@ -358,13 +358,20 @@ const App: React.FC = () => {
   const clearOfficialResults = async () => {
     if (!session?.user?.id || !isAdmin) return;
     try {
-      const { error } = await supabase
+      const expectedCount = Object.keys(officialResults).length;
+      const { data, error } = await supabase
         .from('official_results')
         .delete()
-        .neq('match_id', '');
+        .not('match_id', 'is', null)
+        .select('match_id');
 
       if (error) throw error;
-      setOfficialResults({});
+
+      if (expectedCount > 0 && (!data || data.length === 0)) {
+        throw new Error('Nenhum resultado oficial foi removido. Verifique a policy de DELETE da tabela official_results no Supabase.');
+      }
+
+      await fetchOfficialResults();
     } catch (e) {
       console.error("Erro ao limpar resultados oficiais:", e);
       throw e;
