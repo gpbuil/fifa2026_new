@@ -86,3 +86,6 @@ No Supabase, manter o mesmo Client ID e Client Secret configurados no provider G
 
 ## Resend
 Utiliza conta ginesplanasbuilusa@gmail.com
+
+## supabase
+Tokens e chaves devem ficar apenas em secrets locais/remotos, nunca versionados na documentacao.

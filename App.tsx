@@ -11,6 +11,9 @@ import RankingView from './components/RankingView';
 import { getAdvancedTeams, calculateGroupStandings } from './services/simulator';
 import './components/prediction-view.css';
 
+type ProfileRow = { id: string; full_name: string | null; email?: string | null; bolao_paid?: boolean | null };
+type PredictionRow = { user_id: string; match_id: string; score_a: number | null; score_b: number | null };
+
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [view, setView] = useState<ViewMode>(ViewMode.GROUPS);
@@ -22,13 +25,18 @@ const App: React.FC = () => {
   const [officialResults, setOfficialResults] = useState<Record<string, {a: number | null, b: number | null}>>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
-  const [profiles, setProfiles] = useState<{ id: string; full_name: string | null }[]>([]);
-  const [allPredictions, setAllPredictions] = useState<{ user_id: string; match_id: string; score_a: number | null; score_b: number | null }[]>([]);
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [allPredictions, setAllPredictions] = useState<PredictionRow[]>([]);
   const [rankingLoading, setRankingLoading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
   const isAdminRoute = pathname.startsWith('/admin');
   const isRankingRoute = pathname.startsWith('/ranking');
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   console.log("App renderizado. Reset Mode:", isResettingPassword);
 
@@ -139,11 +147,20 @@ const App: React.FC = () => {
   const fetchRankingData = useCallback(async () => {
     setRankingLoading(true);
     try {
+      const fetchProfiles = async (): Promise<ProfileRow[]> => {
+        const { data, error } = await supabase.from('profiles').select('id, full_name, bolao_paid');
+        if (!error) return data ?? [];
+
+        const { data: fallbackData, error: fallbackError } = await supabase.from('profiles').select('id, full_name');
+        if (fallbackError) throw fallbackError;
+        return fallbackData ?? [];
+      };
+
       const { data: rankingRows, error: rankingRpcError } = await supabase.rpc('get_ranking_rows');
 
       if (!rankingRpcError && Array.isArray(rankingRows) && rankingRows.length > 0) {
-        const rowByUser = new Map<string, { id: string; full_name: string | null }>();
-        const predictionsRows: { user_id: string; match_id: string; score_a: number | null; score_b: number | null }[] = [];
+        const rowByUser = new Map<string, ProfileRow>();
+        const predictionsRows: PredictionRow[] = [];
 
         rankingRows.forEach((row: any) => {
           if (!rowByUser.has(row.user_id)) {
@@ -160,18 +177,29 @@ const App: React.FC = () => {
           });
         });
 
-        setProfiles(Array.from(rowByUser.values()));
+        const profilesRows = await fetchProfiles();
+        const rpcProfiles = Array.from(rowByUser.values());
+        const profileById = new Map<string, ProfileRow>(rpcProfiles.map((profile) => [profile.id, profile]));
+        profilesRows.forEach((profile) => {
+          profileById.set(profile.id, {
+            ...profileById.get(profile.id),
+            ...profile,
+            full_name: profile.full_name ?? profileById.get(profile.id)?.full_name ?? `Jogador ${profile.id.slice(0, 6)}`
+          });
+        });
+
+        setProfiles(Array.from(profileById.values()));
         setAllPredictions(predictionsRows);
       } else {
         const [{ data: profilesData, error: profilesError }, { data: predictionsData, error: predictionsError }] = await Promise.all([
-          supabase.from('profiles').select('id, full_name'),
+          fetchProfiles().then(data => ({ data, error: null as null })).catch(error => ({ data: null, error })),
           supabase.from('predictions').select('user_id, match_id, score_a, score_b')
         ]);
         if (profilesError) throw profilesError;
         if (predictionsError) throw predictionsError;
 
-        const profilesRows = profilesData ?? [];
-        const predictionsRows = predictionsData ?? [];
+        const profilesRows = (profilesData ?? []) as ProfileRow[];
+        const predictionsRows = (predictionsData ?? []) as PredictionRow[];
         const profileById = new Map(profilesRows.map((p) => [p.id, p]));
         const predictionUserIds = Array.from(new Set(predictionsRows.map((p) => p.user_id)));
         const predictionUserIdSet = new Set(predictionUserIds);
@@ -179,7 +207,9 @@ const App: React.FC = () => {
         const rankingProfiles = [
           ...predictionUserIds.map((userId) => ({
             id: userId,
-            full_name: profileById.get(userId)?.full_name ?? `Jogador ${userId.slice(0, 6)}`
+            full_name: profileById.get(userId)?.full_name ?? `Jogador ${userId.slice(0, 6)}`,
+            email: profileById.get(userId)?.email ?? null,
+            bolao_paid: profileById.get(userId)?.bolao_paid ?? false
           })),
           ...profilesRows.filter((p) => !predictionUserIdSet.has(p.id))
         ];
@@ -299,8 +329,8 @@ const App: React.FC = () => {
   }, [fetchSettings, fetchOfficialResults]);
 
   useEffect(() => {
-    if (isRankingRoute) fetchRankingData();
-  }, [isRankingRoute, fetchRankingData]);
+    if (isRankingRoute || (isAdminRoute && isAdmin)) fetchRankingData();
+  }, [isRankingRoute, isAdminRoute, isAdmin, fetchRankingData]);
 
   const savePrediction = async (matchId: string, scoreA: number, scoreB: number) => {
     if (!session?.user?.id) return;
@@ -376,6 +406,33 @@ const App: React.FC = () => {
       console.error("Erro ao limpar resultados oficiais:", e);
       throw e;
     }
+  };
+
+  const sendCompletionReminder = async (userId: string, name: string, missing: number) => {
+    if (!session?.user?.id || !isAdmin) return;
+
+    const { data, error } = await supabase.functions.invoke('send-reminder', {
+      body: { userId, name, missing }
+    });
+
+    if (error) throw error;
+    if (data?.error) throw new Error(data.details || data.error);
+  };
+
+  const updateProfilePaymentStatus = async (userId: string, nextPaid: boolean) => {
+    if (!session?.user?.id || !isAdmin) return;
+
+    const { data, error } = await supabase.rpc('set_profile_payment_status', {
+      target_user_id: userId,
+      next_paid: nextPaid
+    });
+
+    if (error) throw error;
+    if (data === false) throw new Error('Jogador nao encontrado.');
+
+    setProfiles(prev => prev.map(profile => (
+      profile.id === userId ? { ...profile, bolao_paid: nextPaid } : profile
+    )));
   };
 
   const teamById = useMemo(() => {
@@ -648,17 +705,38 @@ const App: React.FC = () => {
   if (isAdminRoute) {
     return (
       <div className="min-h-screen bg-slate-50 pb-20">
-        <nav className="sticky top-0 z-50 glass border-b border-slate-200">
-          <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
-              <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">COPA2026 ADMIN</span>
+        <nav className="sticky top-0 z-50 glass border-b border-slate-200 relative">
+          <div className="max-w-[1600px] mx-auto px-4 h-20 md:h-24 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <img src="/logobolao.png" alt="Bolão" className="h-14 w-14 md:h-20 md:w-20 object-contain" />
+              <span className="truncate font-black text-sm md:text-lg text-indigo-900 leading-none tracking-tighter">COPA2026 ADMIN</span>
             </div>
-            <div className="flex gap-2">
+            <div className="hidden md:flex gap-2">
               <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">Voltar ao app</a>
               <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
             </div>
+            <button
+              type="button"
+              className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Abrir menu"
+            >
+              <span className="flex flex-col gap-1.5">
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+              </span>
+            </button>
           </div>
+          {mobileMenuOpen && (
+            <div className="md:hidden absolute left-0 right-0 top-full border-b border-slate-200 bg-white shadow-lg">
+              <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-col gap-2">
+                <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Voltar ao app</a>
+                <button onClick={() => supabase.auth.signOut()} className="rounded-xl px-4 py-3 text-left text-sm font-black text-red-600 hover:bg-red-50">Sair</button>
+              </div>
+            </div>
+          )}
         </nav>
         {roleLoading ? (
           <div className="max-w-[1600px] mx-auto px-4 py-10 text-sm text-slate-500">Carregando permissÃµes...</div>
@@ -670,12 +748,17 @@ const App: React.FC = () => {
             onToggleLock={updatePredictionsLocked}
             onSaveOfficial={saveOfficialResult}
             onClearOfficialResults={clearOfficialResults}
+            onSendReminder={sendCompletionReminder}
+            onTogglePayment={updateProfilePaymentStatus}
             groupMatches={matches}
             knockoutMatches={knockoutMatches}
             resolvePlaceholder={resolveOfficialPlaceholder}
             groupResultsComplete={groupResultsComplete}
             groupResultsCount={groupResultsCount}
             groupResultsTotal={groupResultsTotal}
+            profiles={profiles}
+            predictions={allPredictions}
+            completionLoading={rankingLoading}
           />
         )}
       </div>
@@ -685,20 +768,44 @@ const App: React.FC = () => {
   if (isRankingRoute) {
     return (
       <div className="min-h-screen bg-slate-50 pb-20">
-        <nav className="sticky top-0 z-50 glass border-b border-slate-200">
-          <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
-              <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">BOLÃO DA COPA DO MANDUCA</span>
+        <nav className="sticky top-0 z-50 glass border-b border-slate-200 relative">
+          <div className="max-w-[1600px] mx-auto px-4 h-20 md:h-24 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <img src="/logobolao.png" alt="Bolão" className="h-14 w-14 md:h-20 md:w-20 object-contain" />
+              <span className="truncate font-black text-sm md:text-lg text-indigo-900 leading-none tracking-tighter">BOLÃO DA COPA DO MANDUCA</span>
             </div>
-            <div className="flex gap-2">
+            <div className="hidden md:flex gap-2">
               <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">VOLTAR AOS SEUS RESULTADOS</a>
               {isAdmin && (
                 <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ADMIN</a>
               )}
               <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
             </div>
+            <button
+              type="button"
+              className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Abrir menu"
+            >
+              <span className="flex flex-col gap-1.5">
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+              </span>
+            </button>
           </div>
+          {mobileMenuOpen && (
+            <div className="md:hidden absolute left-0 right-0 top-full border-b border-slate-200 bg-white shadow-lg">
+              <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-col gap-2">
+                <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Voltar aos seus resultados</a>
+                {isAdmin && (
+                  <a href="/admin" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Admin</a>
+                )}
+                <button onClick={() => supabase.auth.signOut()} className="rounded-xl px-4 py-3 text-left text-sm font-black text-red-600 hover:bg-red-50">Sair</button>
+              </div>
+            </div>
+          )}
         </nav>
         <RankingView
           profiles={profiles}
@@ -712,16 +819,16 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      <nav className="sticky top-0 z-50 glass border-b border-slate-200">
-        <div className="max-w-[1600px] mx-auto px-4 h-24 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/logobolao.png" alt="Bolão" className="h-20 w-20 object-contain" />
-            <span className="font-black text-lg text-indigo-900 leading-none tracking-tighter">BOLÃO DA COPA DO MANDUCA</span>
+      <nav className="sticky top-0 z-50 glass border-b border-slate-200 relative">
+        <div className="max-w-[1600px] mx-auto px-4 h-20 md:h-24 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <img src="/logobolao.png" alt="Bolão" className="h-14 w-14 md:h-20 md:w-20 object-contain" />
+            <span className="truncate font-black text-sm md:text-lg text-indigo-900 leading-none tracking-tighter">BOLÃO DA COPA DO MANDUCA</span>
           </div>
-          <div className="flex gap-2">
+          <div className="hidden md:flex gap-2">
 
-            <button onClick={() => setView(ViewMode.GROUPS)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
-            <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
+            <button onClick={() => setView(ViewMode.GROUPS)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
+            <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
             <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
               RANKING
             </a>
@@ -731,7 +838,7 @@ const App: React.FC = () => {
               </a>
             )}
           </div>
-          <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
+          <button onClick={() => supabase.auth.signOut()} className="hidden md:inline-flex text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
         </div>
       </nav>
       <main className="prediction-shell max-w-[1600px] mx-auto px-4 py-8">
@@ -740,8 +847,6 @@ const App: React.FC = () => {
             <h2 className="prediction-title">Entrada de Resultados</h2>
           </div>
           <div className="prediction-chips">
-            <span className="prediction-chip">Grupos: {GROUPS.length}</span>
-            <span className="prediction-chip">Mata-mata: {knockoutMatches.length} jogos</span>
             <span className="prediction-chip">{predictionsLocked ? 'Resultados bloqueados' : 'Resultados abertos'}</span>
           </div>
         </section>
@@ -761,6 +866,9 @@ const App: React.FC = () => {
           >
             Mata-mata
           </button>
+          <a href="/ranking" className="prediction-mobile-tab">
+            Ranking
+          </a>
         </div>
         {predictionsLocked && (
           <div className="mb-6 bg-amber-50 border border-amber-100 text-amber-700 text-sm font-semibold rounded-xl px-4 py-3">
