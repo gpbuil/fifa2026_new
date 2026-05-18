@@ -29,6 +29,9 @@ export interface GroupStanding {
   points: number;
 }
 
+export type DisciplineScores = Record<string, number | null | undefined>;
+export type DrawOrder = Record<string, number | null | undefined>;
+
 export interface Prediction {
   id?: string;
   user_id: string;

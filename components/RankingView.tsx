@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { GROUPS, TEAMS_DATA } from '../data/teams';
 import { buildUserScoreSummary, PHASE_LABEL, PhaseKey } from '../services/scoring';
 import { calculateGroupStandings, getAdvancedTeams } from '../services/simulator';
-import { Match, Team } from '../types';
+import { DisciplineScores, DrawOrder, Match, Team } from '../types';
 import './ranking-view.css';
 
 interface Profile {
@@ -21,6 +21,8 @@ interface RankingViewProps {
   profiles: Profile[];
   predictions: PredictionRow[];
   officialResults: Record<string, { a: number | null; b: number | null }>;
+  disciplineScores: DisciplineScores;
+  drawOrder: DrawOrder;
   loading: boolean;
 }
 
@@ -29,7 +31,18 @@ type LegendMatrixPhaseKey = 'groups' | 'r32' | 'r16' | 'qf' | 'sf' | 'third' | '
 type BaseLegendPhaseKey = PhaseKey;
 
 const RANKING_PAGE_SIZE = 10;
-const DETAIL_PAGE_SIZE = 12;
+const DETAIL_PAGE_SIZE = 10;
+type DetailPhaseFilter = PhaseKey | 'finals' | 'all';
+
+const DETAIL_PHASE_OPTIONS: Array<{ value: DetailPhaseFilter; label: string }> = [
+  { value: 'all', label: 'Todas' },
+  { value: 'groups', label: 'Fase de grupo' },
+  { value: 'r32', label: 'Rodada 32' },
+  { value: 'r16', label: 'Rodada 16' },
+  { value: 'qf', label: 'Quartas' },
+  { value: 'sf', label: 'Semis' },
+  { value: 'finals', label: 'Finais' }
+];
 
 const KNOCKOUT_SLOT_BY_MATCH: Record<string, { a: string; b: string }> = {
   '73': { a: '2A', b: '2B' },
@@ -100,11 +113,12 @@ const LEGEND_RULE_ROWS: Array<{ key: LegendRuleKey; label: string }> = [
 
 const teamById = new Map<string, Team>(TEAMS_DATA.map((team) => [team.id, team]));
 
-const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, officialResults, loading }) => {
+const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, officialResults, disciplineScores, drawOrder, loading }) => {
   const [search, setSearch] = useState('');
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [rankingPage, setRankingPage] = useState(1);
   const [detailPage, setDetailPage] = useState(1);
+  const [detailPhase, setDetailPhase] = useState<DetailPhaseFilter>('all');
 
   const normalizeFlagCode = useCallback((iso2: string): string | null => {
     const normalized = iso2.toLowerCase();
@@ -166,10 +180,10 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
         userPredictions.forEach((prediction) => {
           predictionMap[prediction.match_id] = { a: prediction.score_a, b: prediction.score_b };
         });
-        return buildUserScoreSummary(profile.id, profile.full_name || 'Sem nome', predictionMap, officialResults);
+        return buildUserScoreSummary(profile.id, profile.full_name || 'Sem nome', predictionMap, officialResults, disciplineScores, drawOrder);
       })
       .sort((a, b) => b.total - a.total);
-  }, [profiles, predictions, officialResults]);
+  }, [disciplineScores, drawOrder, profiles, predictions, officialResults]);
 
   const filteredSummaries = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -228,16 +242,16 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
         (match) => match.scoreA !== null && match.scoreA !== undefined && match.scoreB !== null && match.scoreB !== undefined
       );
       if (!hasAnyOfficialScore) return;
-      const standings = calculateGroupStandings(teamsInGroup, groupMatches);
+      const standings = calculateGroupStandings(teamsInGroup, groupMatches, disciplineScores, drawOrder);
       const top3 = standings.slice(0, 3).map((standing) => standing.teamId);
       if (top3[0]) placements.set(`1${group}`, top3[0]);
       if (top3[1]) placements.set(`2${group}`, top3[1]);
       if (top3[2]) placements.set(`3${group}`, top3[2]);
     });
     return placements;
-  }, [officialGroupMatches]);
+  }, [disciplineScores, drawOrder, officialGroupMatches]);
 
-  const officialAdvanced = useMemo(() => getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches), [officialGroupMatches]);
+  const officialAdvanced = useMemo(() => getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches, disciplineScores, drawOrder), [disciplineScores, drawOrder, officialGroupMatches]);
 
   const resolveMatchToken = useCallback(
     (token: string, visited: Set<string>): Team | null => {
@@ -321,18 +335,24 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
       .filter((item): item is { match: (typeof activeSummary.perMatch)[number]; matchup: { a: Team; b: Team } } => item !== null);
   }, [activeSummary, resolveMatchupByMatchId]);
 
-  const detailTotalPages = Math.max(1, Math.ceil(detailRowsResolved.length / DETAIL_PAGE_SIZE));
+  const detailRowsFiltered = useMemo(() => {
+    if (detailPhase === 'all') return detailRowsResolved;
+    if (detailPhase === 'finals') return detailRowsResolved.filter(({ match }) => match.phase === 'third' || match.phase === 'final');
+    return detailRowsResolved.filter(({ match }) => match.phase === detailPhase);
+  }, [detailPhase, detailRowsResolved]);
+
+  const detailTotalPages = Math.max(1, Math.ceil(detailRowsFiltered.length / DETAIL_PAGE_SIZE));
 
   useEffect(() => {
     setDetailPage(1);
-  }, [activeUserId]);
+  }, [activeUserId, detailPhase]);
 
   useEffect(() => {
     setDetailPage((prev) => Math.max(1, Math.min(prev, detailTotalPages)));
   }, [detailTotalPages]);
 
   const detailStart = (detailPage - 1) * DETAIL_PAGE_SIZE;
-  const detailRows = detailRowsResolved.slice(detailStart, detailStart + DETAIL_PAGE_SIZE);
+  const detailRows = detailRowsFiltered.slice(detailStart, detailStart + DETAIL_PAGE_SIZE);
 
   if (loading) {
     return (
@@ -513,6 +533,23 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
               </div>
 
               <div className="ranking-pagination" data-testid="detail-pagination">
+                <label className="ranking-detail-filter">
+                  <span>Fase</span>
+                  <select
+                    value={detailPhase}
+                    onChange={(event) => {
+                      setDetailPhase(event.target.value as DetailPhaseFilter);
+                      setDetailPage(1);
+                    }}
+                    aria-label="Filtrar fase no detalhe"
+                  >
+                    {DETAIL_PHASE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   type="button"
                   data-testid="detail-page-prev"

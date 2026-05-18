@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from './supabase';
 import { TEAMS_DATA, GROUPS } from './data/teams';
-import { Match, ViewMode } from './types';
+import { FIFA_DRAW_ORDER } from './data/fifaDrawOrder';
+import { DisciplineScores, DrawOrder, Match, ViewMode } from './types';
 import Auth from './components/Auth';
 import GroupCard from './components/GroupCard';
 import KnockoutBracket from './components/KnockoutBracket';
@@ -23,6 +24,8 @@ const App: React.FC = () => {
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [predictionsLocked, setPredictionsLocked] = useState<boolean | null>(null);
   const [officialResults, setOfficialResults] = useState<Record<string, {a: number | null, b: number | null}>>({});
+  const [disciplineScores, setDisciplineScores] = useState<DisciplineScores>({});
+  const [drawOrder, setDrawOrder] = useState<DrawOrder>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
@@ -141,6 +144,25 @@ const App: React.FC = () => {
     } catch (e) {
       console.warn("Erro ao buscar resultados oficiais:", e);
       setOfficialResults({});
+    }
+  }, []);
+
+  const fetchDisciplineScores = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('team_discipline').select('team_id, conduct_score, draw_order');
+      if (error) throw error;
+      const disciplineMap: DisciplineScores = {};
+      const drawMap: DrawOrder = { ...FIFA_DRAW_ORDER };
+      data?.forEach((row: any) => {
+        disciplineMap[row.team_id] = row.conduct_score;
+        drawMap[row.team_id] = row.draw_order ?? FIFA_DRAW_ORDER[row.team_id];
+      });
+      setDisciplineScores(disciplineMap);
+      setDrawOrder(drawMap);
+    } catch (e) {
+      console.warn("Erro ao buscar historico disciplinar:", e);
+      setDisciplineScores({});
+      setDrawOrder(FIFA_DRAW_ORDER);
     }
   }, []);
 
@@ -326,7 +348,8 @@ const App: React.FC = () => {
   useEffect(() => {
     fetchSettings();
     fetchOfficialResults();
-  }, [fetchSettings, fetchOfficialResults]);
+    fetchDisciplineScores();
+  }, [fetchSettings, fetchOfficialResults, fetchDisciplineScores]);
 
   useEffect(() => {
     if (isRankingRoute || (isAdminRoute && isAdmin)) fetchRankingData();
@@ -408,6 +431,48 @@ const App: React.FC = () => {
     }
   };
 
+  const saveTeamTiebreaker = async (teamId: string, conductScore: number | null, drawRank: number | null) => {
+    if (!session?.user?.id || !isAdmin) return;
+
+    try {
+      if (conductScore === null && drawRank === null) {
+        const { error } = await supabase.from('team_discipline').delete().eq('team_id', teamId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('team_discipline').upsert({
+          team_id: teamId,
+          conduct_score: conductScore,
+          draw_order: drawRank,
+          updated_by: session.user.id,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'team_id' });
+        if (error) throw error;
+      }
+
+      setDisciplineScores(prev => {
+        const next = { ...prev };
+        if (conductScore === null && drawRank === null) {
+          delete next[teamId];
+        } else {
+          next[teamId] = conductScore;
+        }
+        return next;
+      });
+      setDrawOrder(prev => {
+        const next = { ...prev };
+        if (conductScore === null && drawRank === null) {
+          next[teamId] = FIFA_DRAW_ORDER[teamId];
+        } else {
+          next[teamId] = drawRank;
+        }
+        return next;
+      });
+    } catch (e) {
+      console.error("Erro ao salvar historico disciplinar:", e);
+      throw e;
+    }
+  };
+
   const sendCompletionReminder = async (userId: string, name: string, missing: number) => {
     if (!session?.user?.id || !isAdmin) return;
 
@@ -467,14 +532,17 @@ const App: React.FC = () => {
         };
       });
 
-      const standings = calculateGroupStandings(groupTeams, groupMatchesOfficial).map((standing) => {
+      const standings = calculateGroupStandings(groupTeams, groupMatchesOfficial, disciplineScores, drawOrder).map((standing) => {
         const team = teamById.get(standing.teamId);
         return {
           teamId: standing.teamId,
           teamName: team?.name ?? standing.teamId,
           teamIso2: team?.iso2 ?? '',
           points: standing.points,
-          goalsDifference: standing.goalsDifference
+          goalsDifference: standing.goalsDifference,
+          goalsFor: standing.goalsFor,
+          disciplineScore: disciplineScores[standing.teamId],
+          fifaDrawRank: drawOrder[standing.teamId]
         };
       });
 
@@ -484,7 +552,7 @@ const App: React.FC = () => {
         standings
       };
     });
-  }, [matches, officialResults, teamById]);
+  }, [disciplineScores, drawOrder, matches, officialResults, teamById]);
 
   const groupPlacements = useMemo(() => {
     const map = new Map<string, string>();
@@ -609,7 +677,7 @@ const App: React.FC = () => {
           scoreB: official?.b ?? null
         };
       });
-      const standings = calculateGroupStandings(groupTeams, groupMatches);
+      const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, drawOrder);
       const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
       if (!hasAnyMatch) return;
       const top3 = standings.slice(0, 3).map(s => s.teamId);
@@ -621,7 +689,7 @@ const App: React.FC = () => {
     const officialAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, matches.map(m => {
       const official = officialResults[m.id];
       return { ...m, scoreA: official?.a ?? null, scoreB: official?.b ?? null };
-    }));
+    }), disciplineScores, drawOrder);
 
     const resolve = (token: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
       if (visited.has(token)) return { label: token };
@@ -665,7 +733,7 @@ const App: React.FC = () => {
     };
 
     return resolve(id);
-  }, [matches, officialResults, teamById, knockoutMatches]);
+  }, [disciplineScores, drawOrder, matches, officialResults, teamById, knockoutMatches]);
 
   const groupResultsTotal = useMemo(() => matches.length, [matches]);
   const groupResultsCount = useMemo(() => {
@@ -745,8 +813,11 @@ const App: React.FC = () => {
             isAdmin={isAdmin}
             predictionsLocked={predictionsLocked}
             officialResults={officialResults}
+            disciplineScores={disciplineScores}
+            drawOrder={drawOrder}
             onToggleLock={updatePredictionsLocked}
             onSaveOfficial={saveOfficialResult}
+            onSaveTeamTiebreaker={saveTeamTiebreaker}
             onClearOfficialResults={clearOfficialResults}
             onSendReminder={sendCompletionReminder}
             onTogglePayment={updateProfilePaymentStatus}
@@ -811,6 +882,8 @@ const App: React.FC = () => {
           profiles={profiles}
           predictions={allPredictions}
           officialResults={officialResults}
+          disciplineScores={disciplineScores}
+          drawOrder={drawOrder}
           loading={rankingLoading}
         />
       </div>
@@ -962,18 +1035,21 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="pv-group-blocked-standings">
-                      <table className="pv-group-standings-mini-table" data-testid={`group-standings-table-${groupCard.groupLetter}`}>
+                      <table className="pv-group-standings-mini-table is-expanded" data-testid={`group-standings-table-${groupCard.groupLetter}`}>
                         <thead>
                           <tr>
-                            <th>Time</th>
-                            <th className="is-center">PTS</th>
+                            <th className="is-center">Seleção</th>
+                            <th className="is-center">PG</th>
                             <th className="is-center">SG</th>
+                            <th className="is-center">GT</th>
+                            <th className="is-center">DISC</th>
+                            <th className="is-center">FIFA</th>
                           </tr>
                         </thead>
                         <tbody>
                           {groupCard.standings.map((row) => (
                             <tr key={`${groupCard.groupLetter}-${row.teamId}`} data-testid="groups-standings-row">
-                              <td>
+                              <td className="is-center" title={row.teamName}>
                                 <span className="pv-tracking-team">
                                   {row.teamIso2 ? (
                                     <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamName}`}>
@@ -992,11 +1068,13 @@ const App: React.FC = () => {
                                       <span className="pv-flag-fallback">{row.teamIso2.toUpperCase().slice(0, 2)}</span>
                                     </span>
                                   ) : null}
-                                  <span className="pv-team-name">{row.teamName}</span>
                                 </span>
                               </td>
                               <td className="is-center">{row.points}</td>
                               <td className="is-center">{row.goalsDifference}</td>
+                              <td className="is-center">{row.goalsFor}</td>
+                              <td className="is-center">{row.disciplineScore ?? '-'}</td>
+                              <td className="is-center">{row.fifaDrawRank ?? '-'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1017,6 +1095,8 @@ const App: React.FC = () => {
                   onScoreChange={handleScoreChange}
                   predictionsLocked={!!predictionsLocked}
                   officialScores={officialResults}
+                  disciplineScores={disciplineScores}
+                  drawOrder={drawOrder}
                 />
               ))}
             </div>

@@ -409,6 +409,25 @@
   font-weight: 700;
 }
 
+.ranking-detail-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--ranking-soft);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.ranking-detail-filter select {
+  border: 1px solid rgba(20, 42, 84, 0.2);
+  background: #fff;
+  color: var(--ranking-brand);
+  border-radius: 0.55rem;
+  padding: 0.32rem 0.48rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .ranking-legend-panel {
   margin-top: 0.9rem;
   padding: 0.8rem;
@@ -482,6 +501,15 @@
 
   .ranking-panel-meta {
     display: none;
+  }
+
+  .ranking-pagination {
+    flex-wrap: wrap;
+  }
+
+  .ranking-detail-filter {
+    width: 100%;
+    justify-content: center;
   }
 
   .ranking-list-row {

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Team, Match } from '../types';
+import { DisciplineScores, DrawOrder, Team, Match } from '../types';
 import { calculateGroupStandings } from '../services/simulator';
+import { FIFA_DRAW_ORDER } from '../data/fifaDrawOrder';
 
 interface GroupCardProps {
   groupLetter: string;
@@ -9,6 +10,8 @@ interface GroupCardProps {
   onScoreChange: (matchId: string, team: 'A' | 'B', value: string) => void;
   predictionsLocked?: boolean;
   officialScores?: Record<string, { a: number | null; b: number | null }>;
+  disciplineScores?: DisciplineScores;
+  drawOrder?: DrawOrder;
 }
 
 const FlagImage: React.FC<{ iso2: string; name: string }> = ({ iso2, name }) => (
@@ -35,9 +38,11 @@ const GroupCard: React.FC<GroupCardProps> = ({
   matches,
   onScoreChange,
   predictionsLocked = false,
-  officialScores
+  officialScores,
+  disciplineScores,
+  drawOrder
 }) => {
-  const standings = calculateGroupStandings(teams, matches);
+  const standings = calculateGroupStandings(teams, matches, disciplineScores, drawOrder);
 
   return (
     <article className="pv-group-card" data-testid={`group-card-${groupLetter}`}>
@@ -143,24 +148,35 @@ const GroupCard: React.FC<GroupCardProps> = ({
 
         <aside className="pv-group-standings">
           <div className="pv-table-head pv-table-head-standings">
-            <span>Classificacao</span>
-            <span>P</span>
+            <span>Seleção</span>
+            <span>PG</span>
             <span>SG</span>
+            <span>GT</span>
+            <span>DISC</span>
+            <span>FIFA</span>
           </div>
 
           <div className="pv-standings-list">
             {standings.map((standing, index) => {
               const team = teams.find((item) => item.id === standing.teamId);
               const isQualified = index < 2 && standing.played > 0;
+              const disciplineScore = disciplineScores?.[standing.teamId];
+              const fifaDrawRank = drawOrder?.[standing.teamId] ?? FIFA_DRAW_ORDER[standing.teamId];
               return (
-                <div key={standing.teamId} className={`pv-standings-row ${isQualified ? 'is-qualified' : ''}`}>
-                  <div className="pv-standings-team">
+                <div
+                  key={standing.teamId}
+                  className={`pv-standings-row ${isQualified ? 'is-qualified' : ''}`}
+                  title={team?.name}
+                >
+                  <div className="pv-standings-team" aria-label={team?.name}>
                     <span className={`pv-dot ${isQualified ? 'is-on' : ''}`} />
                     {team && <FlagImage iso2={team.iso2} name={team.name} />}
-                    <span className="pv-team-name">{team?.name}</span>
                   </div>
                   <div className="pv-standings-points">{standing.points}</div>
                   <div className="pv-standings-sg">{standing.goalsDifference}</div>
+                  <div className="pv-standings-gp">{standing.goalsFor}</div>
+                  <div className="pv-standings-discipline">{disciplineScore ?? '-'}</div>
+                  <div className="pv-standings-draw">{fifaDrawRank ?? '-'}</div>
                 </div>
               );
             })}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Match, Team } from '../types';
+import { DisciplineScores, DrawOrder, Match, Team } from '../types';
 import { GROUPS, TEAMS_DATA } from '../data/teams';
 import GroupCard from './GroupCard';
 import KnockoutBracket from './KnockoutBracket';
@@ -26,8 +26,11 @@ interface AdminDashboardProps {
   isAdmin: boolean;
   predictionsLocked: boolean | null;
   officialResults: ScoreMap;
+  disciplineScores: DisciplineScores;
+  drawOrder: DrawOrder;
   onToggleLock: (next: boolean) => Promise<void>;
   onSaveOfficial: (matchId: string, scoreA: number, scoreB: number) => Promise<void>;
+  onSaveTeamTiebreaker: (teamId: string, conductScore: number | null, drawRank: number | null) => Promise<void>;
   onClearOfficialResults: () => Promise<void>;
   onSendReminder: (userId: string, name: string, missing: number) => Promise<void>;
   onTogglePayment: (userId: string, nextPaid: boolean) => Promise<void>;
@@ -42,12 +45,38 @@ interface AdminDashboardProps {
   completionLoading: boolean;
 }
 
+const FlagImage: React.FC<{ iso2: string; name: string }> = ({ iso2, name }) => (
+  <span
+    className="inline-flex h-5 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[3px] border border-slate-200 bg-slate-50"
+    aria-label={`Bandeira ${name}`}
+  >
+    <img
+      src={`https://flagcdn.com/w20/${iso2.toLowerCase()}.png`}
+      srcSet={`https://flagcdn.com/w40/${iso2.toLowerCase()}.png 2x`}
+      alt={`Bandeira ${name}`}
+      className="h-full w-full object-cover"
+      loading="lazy"
+      onError={(event) => {
+        event.currentTarget.style.display = 'none';
+        const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+        if (fallback) fallback.style.display = 'inline-flex';
+      }}
+    />
+    <span className="hidden h-full w-full items-center justify-center text-[9px] font-black text-slate-500" aria-hidden>
+      {iso2.toUpperCase().slice(0, 2)}
+    </span>
+  </span>
+);
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
   isAdmin,
   predictionsLocked,
   officialResults,
+  disciplineScores,
+  drawOrder,
   onToggleLock,
   onSaveOfficial,
+  onSaveTeamTiebreaker,
   onClearOfficialResults,
   onSendReminder,
   onTogglePayment,
@@ -62,10 +91,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   completionLoading
 }) => {
   const [drafts, setDrafts] = useState<ScoreMap>({});
+  const [disciplineDrafts, setDisciplineDrafts] = useState<Record<string, string>>({});
+  const [drawOrderDrafts, setDrawOrderDrafts] = useState<Record<string, string>>({});
   const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
+  const [savingDisciplineIds, setSavingDisciplineIds] = useState<Record<string, boolean>>({});
+  const [disciplineErrors, setDisciplineErrors] = useState<Record<string, string>>({});
   const [clearingResults, setClearingResults] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
   const [completionExpanded, setCompletionExpanded] = useState(false);
+  const [disciplineExpanded, setDisciplineExpanded] = useState(false);
   const [reminderStatus, setReminderStatus] = useState<Record<string, 'sending' | 'sent' | 'error'>>({});
   const [reminderErrors, setReminderErrors] = useState<Record<string, string>>({});
   const [paymentStatus, setPaymentStatus] = useState<Record<string, 'saving' | 'error'>>({});
@@ -79,6 +113,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   useEffect(() => {
     setDrafts(officialResults);
   }, [officialResults]);
+
+  useEffect(() => {
+    const nextDrafts: Record<string, string> = {};
+    const nextDrawDrafts: Record<string, string> = {};
+    TEAMS_DATA.forEach((team) => {
+      const score = disciplineScores[team.id];
+      const rank = drawOrder[team.id];
+      nextDrafts[team.id] = score === null || score === undefined ? '' : String(score);
+      nextDrawDrafts[team.id] = rank === null || rank === undefined ? '' : String(rank);
+    });
+    setDisciplineDrafts(nextDrafts);
+    setDrawOrderDrafts(nextDrawDrafts);
+  }, [disciplineScores, drawOrder]);
 
   const completionRows = useMemo(() => {
     const trackedMatchIds = new Set([...groupMatches, ...knockoutMatches].map((match) => match.id));
@@ -225,6 +272,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         .catch((error) => console.error(error))
         .finally(() => setSavingIds(prev => ({ ...prev, [matchId]: false })));
     }
+  };
+
+  const parseOptionalInteger = (value: string) => {
+    const trimmedValue = value.trim();
+    if (trimmedValue === '') return null;
+    const parsedValue = parseInt(trimmedValue, 10);
+    return Number.isNaN(parsedValue) ? undefined : parsedValue;
+  };
+
+  const handleTiebreakerChange = (teamId: string, field: 'discipline' | 'draw', value: string) => {
+    if (field === 'discipline') {
+      setDisciplineDrafts(prev => ({ ...prev, [teamId]: value }));
+    } else {
+      setDrawOrderDrafts(prev => ({ ...prev, [teamId]: value }));
+    }
+    setDisciplineErrors(prev => ({ ...prev, [teamId]: '' }));
+
+    const nextDiscipline = parseOptionalInteger(field === 'discipline' ? value : disciplineDrafts[teamId] ?? '');
+    const nextDrawRank = parseOptionalInteger(field === 'draw' ? value : drawOrderDrafts[teamId] ?? '');
+    if (nextDiscipline === undefined || nextDrawRank === undefined) return;
+
+    setSavingDisciplineIds(prev => ({ ...prev, [teamId]: true }));
+    onSaveTeamTiebreaker(teamId, nextDiscipline, nextDrawRank)
+      .catch((error) => {
+        console.error(error);
+        setDisciplineErrors(prev => ({
+          ...prev,
+          [teamId]: error instanceof Error ? error.message : 'Nao foi possivel salvar a pontuacao.'
+        }));
+      })
+      .finally(() => setSavingDisciplineIds(prev => ({ ...prev, [teamId]: false })));
   };
 
   const handleClearOfficialResults = async () => {
@@ -535,6 +613,106 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         )}
       </div>
 
+      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm" data-testid="admin-discipline-panel">
+        <button
+          type="button"
+          className="w-full flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 text-left"
+          onClick={() => setDisciplineExpanded(prev => !prev)}
+          aria-expanded={disciplineExpanded}
+          aria-controls="admin-discipline-content"
+        >
+          <div>
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-black text-slate-900">Historico disciplinar</h3>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-sm font-black text-slate-500">
+                {disciplineExpanded ? '-' : '+'}
+              </span>
+            </div>
+            <p className="text-sm text-slate-500">
+              Pontuacao FIFA de conduta: maior pontuacao vence. Se ainda empatar, menor ordem de sorteio vence.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 min-w-full sm:min-w-[320px] lg:min-w-[360px]">
+            <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Selecoes</div>
+              <div className="text-lg font-black text-slate-900 leading-tight">{TEAMS_DATA.length}</div>
+            </div>
+            <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2">
+              <div className="text-[10px] font-black uppercase tracking-widest text-indigo-700">Criterio</div>
+              <div className="text-lg font-black text-indigo-700 leading-tight">F</div>
+            </div>
+          </div>
+        </button>
+
+        {disciplineExpanded && (
+          <div id="admin-discipline-content" className="mt-5 overflow-x-auto rounded-lg border border-slate-100">
+            <table className="min-w-full text-xs" data-testid="admin-discipline-table">
+              <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 text-left">Grupo</th>
+                  <th className="px-3 py-2 text-left">Selecao</th>
+                  <th className="px-3 py-2 text-center">Conduta</th>
+                  <th className="px-3 py-2 text-center">Sorteio</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {TEAMS_DATA.map((team) => {
+                  const isSaving = !!savingDisciplineIds[team.id];
+                  const scoreValue = disciplineDrafts[team.id] ?? '';
+                  const drawValue = drawOrderDrafts[team.id] ?? '';
+                  const error = disciplineErrors[team.id];
+
+                  return (
+                    <tr key={team.id} className="bg-white">
+                      <td className="px-3 py-2 font-black text-slate-500">{team.group}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2 font-black text-slate-900">
+                          <FlagImage iso2={team.iso2} name={team.name} />
+                          <span>{team.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={scoreValue}
+                          onChange={(event) => handleTiebreakerChange(team.id, 'discipline', event.target.value)}
+                          className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center text-sm font-black text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                          aria-label={`Pontuacao disciplinar ${team.name}`}
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <input
+                          type="number"
+                          min="1"
+                          inputMode="numeric"
+                          value={drawValue}
+                          onChange={(event) => handleTiebreakerChange(team.id, 'draw', event.target.value)}
+                          className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center text-sm font-black text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                          aria-label={`Ordem de sorteio ${team.name}`}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        {isSaving ? (
+                          <span className="font-black text-indigo-600">Salvando...</span>
+                        ) : error ? (
+                          <span className="font-semibold text-red-600">{error}</span>
+                        ) : scoreValue === '' && drawValue === '' ? (
+                          <span className="font-semibold text-slate-400">Sem desempate manual</span>
+                        ) : (
+                          <span className="font-black text-emerald-700">Salvo</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <section className="prediction-shell px-0 py-0">
         <div className="prediction-top-card mb-6">
           <div>
@@ -553,6 +731,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               teams={TEAMS_DATA.filter(team => team.group === groupLetter)}
               matches={officialGroupMatches.filter(match => match.group === groupLetter)}
               onScoreChange={handleOfficialScoreChange}
+              disciplineScores={disciplineScores}
+              drawOrder={drawOrder}
             />
           ))}
         </div>

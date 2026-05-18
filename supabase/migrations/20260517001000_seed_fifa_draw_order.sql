@@ -1,0 +1,58 @@
+-- FIFA World Cup 2026 final draw positions encoded as A1=1 through L4=48.
+insert into public.team_discipline (team_id, conduct_score, draw_order)
+values
+  ('MEX', null, 1),
+  ('RSA', null, 2),
+  ('KOR', null, 3),
+  ('UEFA_D', null, 4),
+  ('CAN', null, 5),
+  ('UEFA_A', null, 6),
+  ('QAT', null, 7),
+  ('SUI', null, 8),
+  ('BRA', null, 9),
+  ('MAR', null, 10),
+  ('HAI', null, 11),
+  ('SCO', null, 12),
+  ('USA', null, 13),
+  ('PAR', null, 14),
+  ('AUS', null, 15),
+  ('UEFA_C', null, 16),
+  ('GER', null, 17),
+  ('CUR', null, 18),
+  ('CIV', null, 19),
+  ('ECU', null, 20),
+  ('NED', null, 21),
+  ('JPN', null, 22),
+  ('UEFA_F', null, 23),
+  ('TUN', null, 24),
+  ('BEL', null, 25),
+  ('EGY', null, 26),
+  ('IRN', null, 27),
+  ('NZL', null, 28),
+  ('ESP', null, 29),
+  ('CPV', null, 30),
+  ('KSA', null, 31),
+  ('URU', null, 32),
+  ('FRA', null, 33),
+  ('SEN', null, 34),
+  ('INTER_2', null, 35),
+  ('NOR', null, 36),
+  ('ARG', null, 37),
+  ('ALG', null, 38),
+  ('AUT', null, 39),
+  ('JOR', null, 40),
+  ('POR', null, 41),
+  ('INTER_1', null, 42),
+  ('UZB', null, 43),
+  ('COL', null, 44),
+  ('ENG', null, 45),
+  ('CRO', null, 46),
+  ('GHA', null, 47),
+  ('PAN', null, 48)
+on conflict (team_id) do update
+set
+  draw_order = coalesce(public.team_discipline.draw_order, excluded.draw_order),
+  updated_at = case
+    when public.team_discipline.draw_order is null then now()
+    else public.team_discipline.updated_at
+  end;

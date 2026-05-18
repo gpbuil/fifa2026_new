@@ -1,4 +1,4 @@
-import { Match, Team } from '../types';
+import { DisciplineScores, DrawOrder, Match, Team } from '../types';
 import { TEAMS_DATA, GROUPS } from '../data/teams';
 import { calculateGroupStandings, getAdvancedTeams } from './simulator';
 
@@ -207,6 +207,21 @@ const getPhaseForMatch = (matchId: string): PhaseKey => {
   return 'final';
 };
 
+const getMatchSortNumber = (matchId: string): number => {
+  const groupMatch = matchId.match(/^m-([A-L])-(\d)-(\d)$/);
+  if (groupMatch) {
+    const groupIndex = GROUPS.indexOf(groupMatch[1]);
+    const pairKey = `${groupMatch[2]}-${groupMatch[3]}`;
+    const pairOrder = ['0-1', '0-2', '0-3', '1-2', '1-3', '2-3'].indexOf(pairKey);
+    if (groupIndex >= 0 && pairOrder >= 0) {
+      return groupIndex * 6 + pairOrder + 1;
+    }
+  }
+
+  const knockoutNumber = parseInt(matchId, 10);
+  return Number.isNaN(knockoutNumber) ? Number.MAX_SAFE_INTEGER : knockoutNumber;
+};
+
 const resolveTeam = (
   token: string,
   groupPlacements: Map<string, string>,
@@ -314,14 +329,16 @@ export const buildUserScoreSummary = (
   userId: string,
   name: string,
   predictionMap: Record<string, ScoreMapEntry>,
-  officialMap: Record<string, ScoreMapEntry>
+  officialMap: Record<string, ScoreMapEntry>,
+  disciplineScores?: DisciplineScores,
+  drawOrder?: DrawOrder
 ): UserScoreSummary => {
   const officialGroupMatches = buildGroupMatches(officialMap);
   const officialPlacements = new Map<string, string>();
   GROUPS.forEach(group => {
     const groupTeams = TEAMS_DATA.filter(t => t.group === group);
     const groupMatches = officialGroupMatches.filter(m => m.group === group);
-    const standings = calculateGroupStandings(groupTeams, groupMatches);
+    const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, drawOrder);
     const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
     if (!hasAnyMatch) return;
     const top3 = standings.slice(0, 3).map(s => s.teamId);
@@ -329,7 +346,7 @@ export const buildUserScoreSummary = (
     if (top3[1]) officialPlacements.set(`2${group}`, top3[1]);
     if (top3[2]) officialPlacements.set(`3${group}`, top3[2]);
   });
-  const officialAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches);
+  const officialAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches, disciplineScores, drawOrder);
   const officialKnockoutMatches = buildKnockoutMatches(officialMap);
 
   const userGroupMatches = buildGroupMatches(predictionMap);
@@ -403,6 +420,6 @@ export const buildUserScoreSummary = (
     total,
     byPhase,
     byRule,
-    perMatch: perMatch.sort((a, b) => a.matchId.localeCompare(b.matchId))
+    perMatch: perMatch.sort((a, b) => getMatchSortNumber(a.matchId) - getMatchSortNumber(b.matchId))
   };
 };
