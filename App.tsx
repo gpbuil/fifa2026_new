@@ -918,6 +918,13 @@ const App: React.FC = () => {
         <section className="prediction-top-card">
           <div>
             <h2 className="prediction-title">Entrada de Resultados</h2>
+            <dl className="prediction-legend" aria-label="Legenda da tabela de classificacao">
+              <div><dt>PG</dt><dd>Pontos Ganhos</dd></div>
+              <div><dt>SG</dt><dd>Saldo de Gols</dd></div>
+              <div><dt>GT</dt><dd>Gols Totais</dd></div>
+              <div><dt>DISC</dt><dd>Pontos de disciplina</dd></div>
+              <div><dt>FIFA</dt><dd>Ordem do sorteio da FIFA</dd></div>
+            </dl>
           </div>
           <div className="prediction-chips">
             <span className="prediction-chip">{predictionsLocked ? 'Resultados bloqueados' : 'Resultados abertos'}</span>

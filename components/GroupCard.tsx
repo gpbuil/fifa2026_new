@@ -55,7 +55,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
         <section className="pv-group-matches">
           <div className="pv-table-head">
             <span>Confronto</span>
-            <span>Placar</span>
+            <span aria-hidden="true" />
           </div>
 
           <div className="pv-match-list">

@@ -56,6 +56,33 @@
   font-size: 0.9rem;
 }
 
+.prediction-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  margin: 0.55rem 0 0;
+  color: var(--pv-soft);
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.prediction-legend div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.prediction-legend dt {
+  color: var(--pv-brand);
+  font-weight: 900;
+}
+
+.prediction-legend dd {
+  margin: 0;
+  font-weight: 700;
+}
+
 .prediction-chips {
   display: flex;
   flex-wrap: wrap;
