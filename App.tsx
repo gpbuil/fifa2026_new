@@ -516,6 +516,20 @@ const App: React.FC = () => {
     )));
   };
 
+  const deletePlayer = async (userId: string) => {
+    if (!session?.user?.id || !isAdmin) return;
+
+    const { data, error } = await supabase.functions.invoke('delete-player', {
+      body: { userId }
+    });
+
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    setProfiles(prev => prev.filter(profile => profile.id !== userId));
+    setAllPredictions(prev => prev.filter(prediction => prediction.user_id !== userId));
+  };
+
   const teamById = useMemo(() => {
     const map = new Map<string, typeof TEAMS_DATA[number]>();
     TEAMS_DATA.forEach(t => map.set(t.id, t));
@@ -950,6 +964,8 @@ const App: React.FC = () => {
             onClearOfficialResults={clearOfficialResults}
             onSendReminder={sendCompletionReminder}
             onTogglePayment={updateProfilePaymentStatus}
+            onDeletePlayer={deletePlayer}
+            currentUserId={session?.user?.id ?? null}
             groupMatches={matches}
             knockoutMatches={knockoutMatches}
             resolvePlaceholder={resolveOfficialPlaceholder}

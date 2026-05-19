@@ -34,6 +34,8 @@ interface AdminDashboardProps {
   onClearOfficialResults: () => Promise<void>;
   onSendReminder: (userId: string, name: string, missing: number) => Promise<void>;
   onTogglePayment: (userId: string, nextPaid: boolean) => Promise<void>;
+  onDeletePlayer: (userId: string) => Promise<void>;
+  currentUserId: string | null;
   groupMatches: Match[];
   knockoutMatches: Match[];
   resolvePlaceholder: (id: string) => { team?: Team; label: string };
@@ -80,6 +82,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onClearOfficialResults,
   onSendReminder,
   onTogglePayment,
+  onDeletePlayer,
+  currentUserId,
   groupMatches,
   knockoutMatches,
   resolvePlaceholder,
@@ -104,6 +108,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [reminderErrors, setReminderErrors] = useState<Record<string, string>>({});
   const [paymentStatus, setPaymentStatus] = useState<Record<string, 'saving' | 'error'>>({});
   const [paymentErrors, setPaymentErrors] = useState<Record<string, string>>({});
+  const [deleteStatus, setDeleteStatus] = useState<Record<string, 'deleting' | 'error'>>({});
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
   const [completionSort, setCompletionSort] = useState<{ key: 'name' | 'missing' | 'payment'; direction: 'asc' | 'desc' }>({
     key: 'name',
     direction: 'asc'
@@ -218,6 +224,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setPaymentErrors(prev => ({
         ...prev,
         [row.id]: error instanceof Error ? error.message : 'Nao foi possivel atualizar o pagamento.'
+      }));
+    }
+  };
+
+  const handleDeletePlayer = async (row: typeof completionRows[number]) => {
+    if (row.id === currentUserId) return;
+
+    const confirmed = window.confirm(
+      `Excluir o jogador ${row.name}? Essa acao remove a conta, o perfil e todos os palpites dele.`
+    );
+    if (!confirmed) return;
+
+    setDeleteStatus(prev => ({ ...prev, [row.id]: 'deleting' }));
+    setDeleteErrors(prev => ({ ...prev, [row.id]: '' }));
+
+    try {
+      await onDeletePlayer(row.id);
+      setDeleteStatus(prev => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+    } catch (error) {
+      console.error(error);
+      setDeleteStatus(prev => ({ ...prev, [row.id]: 'error' }));
+      setDeleteErrors(prev => ({
+        ...prev,
+        [row.id]: error instanceof Error ? error.message : 'Nao foi possivel excluir o jogador.'
       }));
     }
   };
@@ -426,6 +460,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {completionRows.map((row) => {
                   const isComplete = row.percent === 100;
                   const paymentIsSaving = paymentStatus[row.id] === 'saving';
+                  const deleteIsRunning = deleteStatus[row.id] === 'deleting';
+                  const isCurrentUser = row.id === currentUserId;
                   return (
                     <article key={row.id} className={`rounded-xl border border-slate-100 p-3 ${isComplete ? 'bg-emerald-50/40' : 'bg-white'}`}>
                       <div className="flex items-start justify-between gap-3">
@@ -451,6 +487,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       )}
                       {paymentErrors[row.id] && (
                         <div className="mt-1 text-[11px] font-semibold text-red-600">{paymentErrors[row.id]}</div>
+                      )}
+                      {deleteErrors[row.id] && (
+                        <div className="mt-1 text-[11px] font-semibold text-red-600">{deleteErrors[row.id]}</div>
                       )}
 
                       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -479,6 +518,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           }`}
                         >
                           {paymentIsSaving ? 'Salvando...' : row.paid ? 'Pago' : 'Pendente'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePlayer(row)}
+                          disabled={deleteIsRunning || isCurrentUser}
+                          className="col-span-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-black text-red-700 transition-all hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleteIsRunning ? 'Excluindo...' : isCurrentUser ? 'Sua conta' : 'Excluir jogador'}
                         </button>
                       </div>
                     </article>
@@ -526,12 +573,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span aria-hidden="true">{sortMarker('payment')}</span>
                         </button>
                       </th>
+                      <th className="px-3 py-2 text-right">Excluir</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {completionRows.map((row) => {
                       const isComplete = row.percent === 100;
                       const paymentIsSaving = paymentStatus[row.id] === 'saving';
+                      const deleteIsRunning = deleteStatus[row.id] === 'deleting';
+                      const isCurrentUser = row.id === currentUserId;
                       return (
                         <tr key={row.id} className={isComplete ? 'bg-emerald-50/30' : 'bg-white'}>
                           <td className="px-3 py-2">
@@ -551,6 +601,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {paymentErrors[row.id] && (
                               <div className="mt-1 max-w-md text-[11px] font-semibold text-red-600">
                                 {paymentErrors[row.id]}
+                              </div>
+                            )}
+                            {deleteErrors[row.id] && (
+                              <div className="mt-1 max-w-md text-[11px] font-semibold text-red-600">
+                                {deleteErrors[row.id]}
                               </div>
                             )}
                           </td>
@@ -599,6 +654,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               }`}
                             >
                               {paymentIsSaving ? 'Salvando...' : row.paid ? 'Pago' : 'Pendente'}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePlayer(row)}
+                              disabled={deleteIsRunning || isCurrentUser}
+                              className="inline-flex rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-black text-red-700 transition-all hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {deleteIsRunning ? 'Excluindo...' : isCurrentUser ? 'Sua conta' : 'Excluir'}
                             </button>
                           </td>
                         </tr>
