@@ -3,7 +3,7 @@ import { GROUPS, TEAMS_DATA } from '../data/teams';
 import { getThirdPlaceGroupForMatch } from '../data/thirdPlaceMatrix';
 import { buildUserScoreSummary, PHASE_LABEL, PhaseKey } from '../services/scoring';
 import { calculateGroupStandings, getAdvancedTeams } from '../services/simulator';
-import { DisciplineScores, DrawOrder, Match, Team } from '../types';
+import { DisciplineScores, FifaRanking, Match, Team } from '../types';
 import './ranking-view.css';
 
 interface Profile {
@@ -23,7 +23,7 @@ interface RankingViewProps {
   predictions: PredictionRow[];
   officialResults: Record<string, { a: number | null; b: number | null }>;
   disciplineScores: DisciplineScores;
-  drawOrder: DrawOrder;
+  fifaRanking: FifaRanking;
   loading: boolean;
 }
 
@@ -114,7 +114,7 @@ const LEGEND_RULE_ROWS: Array<{ key: LegendRuleKey; label: string }> = [
 
 const teamById = new Map<string, Team>(TEAMS_DATA.map((team) => [team.id, team]));
 
-const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, officialResults, disciplineScores, drawOrder, loading }) => {
+const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, officialResults, disciplineScores, fifaRanking, loading }) => {
   const [search, setSearch] = useState('');
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [rankingPage, setRankingPage] = useState(1);
@@ -181,10 +181,10 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
         userPredictions.forEach((prediction) => {
           predictionMap[prediction.match_id] = { a: prediction.score_a, b: prediction.score_b };
         });
-        return buildUserScoreSummary(profile.id, profile.full_name || 'Sem nome', predictionMap, officialResults, disciplineScores, drawOrder);
+        return buildUserScoreSummary(profile.id, profile.full_name || 'Sem nome', predictionMap, officialResults, disciplineScores, fifaRanking);
       })
       .sort((a, b) => b.total - a.total);
-  }, [disciplineScores, drawOrder, profiles, predictions, officialResults]);
+  }, [disciplineScores, fifaRanking, profiles, predictions, officialResults]);
 
   const filteredSummaries = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -243,16 +243,16 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
         (match) => match.scoreA !== null && match.scoreA !== undefined && match.scoreB !== null && match.scoreB !== undefined
       );
       if (!hasAnyOfficialScore) return;
-      const standings = calculateGroupStandings(teamsInGroup, groupMatches, disciplineScores, drawOrder);
+      const standings = calculateGroupStandings(teamsInGroup, groupMatches, disciplineScores, fifaRanking);
       const top3 = standings.slice(0, 3).map((standing) => standing.teamId);
       if (top3[0]) placements.set(`1${group}`, top3[0]);
       if (top3[1]) placements.set(`2${group}`, top3[1]);
       if (top3[2]) placements.set(`3${group}`, top3[2]);
     });
     return placements;
-  }, [disciplineScores, drawOrder, officialGroupMatches]);
+  }, [disciplineScores, fifaRanking, officialGroupMatches]);
 
-  const officialAdvanced = useMemo(() => getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches, disciplineScores, drawOrder), [disciplineScores, drawOrder, officialGroupMatches]);
+  const officialAdvanced = useMemo(() => getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches, disciplineScores, fifaRanking), [disciplineScores, fifaRanking, officialGroupMatches]);
   const qualifiedThirdGroups = useMemo(() => officialAdvanced.bestThirdPlaces.map((team) => team.group), [officialAdvanced.bestThirdPlaces]);
 
   const resolveMatchToken = useCallback(

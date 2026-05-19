@@ -1,5 +1,5 @@
 
-import { DisciplineScores, DrawOrder, Match, GroupStanding, Team } from '../types';
+import { DisciplineScores, FifaRanking, Match, GroupStanding, Team } from '../types';
 
 const hasScore = (match: Match) => (
   match.scoreA !== null
@@ -18,7 +18,7 @@ const compareByManualTiebreakers = (
   a: GroupStanding,
   b: GroupStanding,
   disciplineScores?: DisciplineScores,
-  drawOrder?: DrawOrder
+  fifaRanking?: FifaRanking
 ) => {
   const disciplineA = disciplineScores?.[a.teamId];
   const disciplineB = disciplineScores?.[b.teamId];
@@ -26,10 +26,10 @@ const compareByManualTiebreakers = (
     return disciplineB - disciplineA;
   }
 
-  const drawA = drawOrder?.[a.teamId];
-  const drawB = drawOrder?.[b.teamId];
-  if (drawA !== null && drawA !== undefined && drawB !== null && drawB !== undefined && drawA !== drawB) {
-    return drawA - drawB;
+  const rankA = fifaRanking?.[a.teamId];
+  const rankB = fifaRanking?.[b.teamId];
+  if (rankA !== null && rankA !== undefined && rankB !== null && rankB !== undefined && rankA !== rankB) {
+    return rankA - rankB;
   }
 
   return 0;
@@ -128,19 +128,19 @@ const resolveTiedRows = (
   rows: GroupStanding[],
   matches: Match[],
   disciplineScores?: DisciplineScores,
-  drawOrder?: DrawOrder
+  fifaRanking?: FifaRanking
 ): GroupStanding[] => {
   if (rows.length <= 1) return rows;
 
   const headToHeadGroups = splitByHeadToHead(rows, matches);
   if (headToHeadGroups.length > 1) {
-    return headToHeadGroups.flatMap(group => resolveTiedRows(group, matches, disciplineScores, drawOrder));
+    return headToHeadGroups.flatMap(group => resolveTiedRows(group, matches, disciplineScores, fifaRanking));
   }
 
   return [...rows].sort((a, b) => {
     const tableStatsCompare = compareByTableStats(a, b);
     if (tableStatsCompare !== 0) return tableStatsCompare;
-    return compareByManualTiebreakers(a, b, disciplineScores, drawOrder);
+    return compareByManualTiebreakers(a, b, disciplineScores, fifaRanking);
   });
 };
 
@@ -148,7 +148,7 @@ export const calculateGroupStandings = (
   teams: Team[],
   matches: Match[],
   disciplineScores?: DisciplineScores,
-  drawOrder?: DrawOrder
+  fifaRanking?: FifaRanking
 ): GroupStanding[] => {
   const standings: Record<string, GroupStanding> = {};
 
@@ -218,7 +218,7 @@ export const calculateGroupStandings = (
     }
   });
 
-  return groups.flatMap(group => resolveTiedRows(group, matches, disciplineScores, drawOrder));
+  return groups.flatMap(group => resolveTiedRows(group, matches, disciplineScores, fifaRanking));
 };
 
 export const getAdvancedTeams = (
@@ -226,7 +226,7 @@ export const getAdvancedTeams = (
   allTeams: Team[],
   allMatches: Match[],
   disciplineScores?: DisciplineScores,
-  drawOrder?: DrawOrder
+  fifaRanking?: FifaRanking
 ) => {
   const winners: Team[] = [];
   const runnersUp: Team[] = [];
@@ -235,7 +235,7 @@ export const getAdvancedTeams = (
   groups.forEach(groupLetter => {
     const groupTeams = allTeams.filter(t => t.group === groupLetter);
     const groupMatches = allMatches.filter(m => m.group === groupLetter);
-    const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, drawOrder);
+    const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, fifaRanking);
 
     // Só avança times se pelo menos UM jogo foi disputado no grupo
     const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
@@ -264,10 +264,10 @@ export const getAdvancedTeams = (
         return disciplineB - disciplineA;
       }
 
-      const drawA = drawOrder?.[a.team.id];
-      const drawB = drawOrder?.[b.team.id];
-      if (drawA !== null && drawA !== undefined && drawB !== null && drawB !== undefined && drawA !== drawB) {
-        return drawA - drawB;
+      const rankA = fifaRanking?.[a.team.id];
+      const rankB = fifaRanking?.[b.team.id];
+      if (rankA !== null && rankA !== undefined && rankB !== null && rankB !== undefined && rankA !== rankB) {
+        return rankA - rankB;
       }
 
       return 0;

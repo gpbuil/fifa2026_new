@@ -1,7 +1,7 @@
 import React from 'react';
-import { DisciplineScores, DrawOrder, Team, Match } from '../types';
+import { DisciplineScores, FifaRanking, Team, Match } from '../types';
 import { calculateGroupStandings } from '../services/simulator';
-import { FIFA_DRAW_ORDER } from '../data/fifaDrawOrder';
+import { FIFA_RANKING } from '../data/fifaRanking';
 
 interface GroupCardProps {
   groupLetter: string;
@@ -11,7 +11,7 @@ interface GroupCardProps {
   predictionsLocked?: boolean;
   officialScores?: Record<string, { a: number | null; b: number | null }>;
   disciplineScores?: DisciplineScores;
-  drawOrder?: DrawOrder;
+  fifaRanking?: FifaRanking;
 }
 
 const FlagImage: React.FC<{ iso2: string; name: string }> = ({ iso2, name }) => (
@@ -40,9 +40,9 @@ const GroupCard: React.FC<GroupCardProps> = ({
   predictionsLocked = false,
   officialScores,
   disciplineScores,
-  drawOrder
+  fifaRanking
 }) => {
-  const standings = calculateGroupStandings(teams, matches, disciplineScores, drawOrder);
+  const standings = calculateGroupStandings(teams, matches, disciplineScores, fifaRanking);
 
   return (
     <article className="pv-group-card" data-testid={`group-card-${groupLetter}`}>
@@ -161,7 +161,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
               const team = teams.find((item) => item.id === standing.teamId);
               const isQualified = index < 2 && standing.played > 0;
               const disciplineScore = disciplineScores?.[standing.teamId];
-              const fifaDrawRank = drawOrder?.[standing.teamId] ?? FIFA_DRAW_ORDER[standing.teamId];
+              const fifaRank = fifaRanking?.[standing.teamId] ?? FIFA_RANKING[standing.teamId];
               return (
                 <div
                   key={standing.teamId}
@@ -176,7 +176,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
                   <div className="pv-standings-sg">{standing.goalsDifference}</div>
                   <div className="pv-standings-gp">{standing.goalsFor}</div>
                   <div className="pv-standings-discipline">{disciplineScore ?? '-'}</div>
-                  <div className="pv-standings-draw">{fifaDrawRank ?? '-'}</div>
+                  <div className="pv-standings-draw">{fifaRank ?? '-'}</div>
                 </div>
               );
             })}

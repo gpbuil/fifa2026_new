@@ -1,4 +1,4 @@
-import { DisciplineScores, DrawOrder, Match, Team } from '../types';
+import { DisciplineScores, FifaRanking, Match, Team } from '../types';
 import { TEAMS_DATA, GROUPS } from '../data/teams';
 import { getThirdPlaceGroupForMatch } from '../data/thirdPlaceMatrix';
 import { calculateGroupStandings, getAdvancedTeams } from './simulator';
@@ -335,14 +335,14 @@ export const buildUserScoreSummary = (
   predictionMap: Record<string, ScoreMapEntry>,
   officialMap: Record<string, ScoreMapEntry>,
   disciplineScores?: DisciplineScores,
-  drawOrder?: DrawOrder
+  fifaRanking?: FifaRanking
 ): UserScoreSummary => {
   const officialGroupMatches = buildGroupMatches(officialMap);
   const officialPlacements = new Map<string, string>();
   GROUPS.forEach(group => {
     const groupTeams = TEAMS_DATA.filter(t => t.group === group);
     const groupMatches = officialGroupMatches.filter(m => m.group === group);
-    const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, drawOrder);
+    const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, fifaRanking);
     const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
     if (!hasAnyMatch) return;
     const top3 = standings.slice(0, 3).map(s => s.teamId);
@@ -350,7 +350,7 @@ export const buildUserScoreSummary = (
     if (top3[1]) officialPlacements.set(`2${group}`, top3[1]);
     if (top3[2]) officialPlacements.set(`3${group}`, top3[2]);
   });
-  const officialAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches, disciplineScores, drawOrder);
+  const officialAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches, disciplineScores, fifaRanking);
   const officialKnockoutMatches = buildKnockoutMatches(officialMap);
 
   const userGroupMatches = buildGroupMatches(predictionMap);
@@ -427,3 +427,4 @@ export const buildUserScoreSummary = (
     perMatch: perMatch.sort((a, b) => getMatchSortNumber(a.matchId) - getMatchSortNumber(b.matchId))
   };
 };
+

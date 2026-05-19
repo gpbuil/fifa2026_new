@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from './supabase';
 import { TEAMS_DATA, GROUPS } from './data/teams';
-import { FIFA_DRAW_ORDER } from './data/fifaDrawOrder';
-import { DisciplineScores, DrawOrder, Match, ViewMode } from './types';
+import { FIFA_RANKING } from './data/fifaRanking';
+import { DisciplineScores, FifaRanking, Match, ViewMode } from './types';
 import Auth from './components/Auth';
 import GroupCard from './components/GroupCard';
 import KnockoutBracket from './components/KnockoutBracket';
@@ -28,7 +28,7 @@ type ThirdPlaceRow = {
   goalsAgainst: number;
   goalsDifference: number;
   disciplineScore?: number | null;
-  fifaDrawRank?: number | null;
+  fifaRank?: number | null;
 };
 
 const App: React.FC = () => {
@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const [predictionsLocked, setPredictionsLocked] = useState<boolean | null>(null);
   const [officialResults, setOfficialResults] = useState<Record<string, {a: number | null, b: number | null}>>({});
   const [disciplineScores, setDisciplineScores] = useState<DisciplineScores>({});
-  const [drawOrder, setDrawOrder] = useState<DrawOrder>({});
+  const [fifaRanking, setFifaRanking] = useState<FifaRanking>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleLoading, setRoleLoading] = useState(true);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
@@ -168,17 +168,17 @@ const App: React.FC = () => {
       const { data, error } = await supabase.from('team_discipline').select('team_id, conduct_score, draw_order');
       if (error) throw error;
       const disciplineMap: DisciplineScores = {};
-      const drawMap: DrawOrder = { ...FIFA_DRAW_ORDER };
+      const rankingMap: FifaRanking = { ...FIFA_RANKING };
       data?.forEach((row: any) => {
         disciplineMap[row.team_id] = row.conduct_score;
-        drawMap[row.team_id] = row.draw_order ?? FIFA_DRAW_ORDER[row.team_id];
+        rankingMap[row.team_id] = row.draw_order ?? FIFA_RANKING[row.team_id];
       });
       setDisciplineScores(disciplineMap);
-      setDrawOrder(drawMap);
+      setFifaRanking(rankingMap);
     } catch (e) {
       console.warn("Erro ao buscar historico disciplinar:", e);
       setDisciplineScores({});
-      setDrawOrder(FIFA_DRAW_ORDER);
+      setFifaRanking(FIFA_RANKING);
     }
   }, []);
 
@@ -447,18 +447,18 @@ const App: React.FC = () => {
     }
   };
 
-  const saveTeamTiebreaker = async (teamId: string, conductScore: number | null, drawRank: number | null) => {
+  const saveTeamTiebreaker = async (teamId: string, conductScore: number | null, fifaRank: number | null) => {
     if (!session?.user?.id || !isAdmin) return;
 
     try {
-      if (conductScore === null && drawRank === null) {
+      if (conductScore === null && fifaRank === null) {
         const { error } = await supabase.from('team_discipline').delete().eq('team_id', teamId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('team_discipline').upsert({
           team_id: teamId,
           conduct_score: conductScore,
-          draw_order: drawRank,
+          draw_order: fifaRank,
           updated_by: session.user.id,
           updated_at: new Date().toISOString()
         }, { onConflict: 'team_id' });
@@ -467,19 +467,19 @@ const App: React.FC = () => {
 
       setDisciplineScores(prev => {
         const next = { ...prev };
-        if (conductScore === null && drawRank === null) {
+        if (conductScore === null && fifaRank === null) {
           delete next[teamId];
         } else {
           next[teamId] = conductScore;
         }
         return next;
       });
-      setDrawOrder(prev => {
+      setFifaRanking(prev => {
         const next = { ...prev };
-        if (conductScore === null && drawRank === null) {
-          next[teamId] = FIFA_DRAW_ORDER[teamId];
+        if (conductScore === null && fifaRank === null) {
+          next[teamId] = FIFA_RANKING[teamId];
         } else {
-          next[teamId] = drawRank;
+          next[teamId] = fifaRank;
         }
         return next;
       });
@@ -548,7 +548,7 @@ const App: React.FC = () => {
         };
       });
 
-      const standings = calculateGroupStandings(groupTeams, groupMatchesOfficial, disciplineScores, drawOrder).map((standing) => {
+      const standings = calculateGroupStandings(groupTeams, groupMatchesOfficial, disciplineScores, fifaRanking).map((standing) => {
         const team = teamById.get(standing.teamId);
         return {
           teamId: standing.teamId,
@@ -558,7 +558,7 @@ const App: React.FC = () => {
           goalsDifference: standing.goalsDifference,
           goalsFor: standing.goalsFor,
           disciplineScore: disciplineScores[standing.teamId],
-          fifaDrawRank: drawOrder[standing.teamId]
+          fifaRank: fifaRanking[standing.teamId]
         };
       });
 
@@ -568,7 +568,7 @@ const App: React.FC = () => {
         standings
       };
     });
-  }, [disciplineScores, drawOrder, matches, officialResults, teamById]);
+  }, [disciplineScores, fifaRanking, matches, officialResults, teamById]);
 
   const groupPlacements = useMemo(() => {
     const map = new Map<string, string>();
@@ -604,7 +604,7 @@ const App: React.FC = () => {
         groupTeams,
         groupMatches,
         useManualTiebreakers ? disciplineScores : undefined,
-        useManualTiebreakers ? drawOrder : undefined
+        useManualTiebreakers ? fifaRanking : undefined
       );
       const standing = standings[2];
       if (!standing || standing.played <= 0) return [];
@@ -623,7 +623,7 @@ const App: React.FC = () => {
         goalsAgainst: standing.goalsAgainst,
         goalsDifference: standing.goalsDifference,
         disciplineScore: disciplineScores[standing.teamId],
-        fifaDrawRank: drawOrder[standing.teamId] ?? FIFA_DRAW_ORDER[standing.teamId]
+        fifaRank: fifaRanking[standing.teamId] ?? FIFA_RANKING[standing.teamId]
       }];
     });
 
@@ -646,10 +646,10 @@ const App: React.FC = () => {
             return disciplineB - disciplineA;
           }
 
-          const drawA = a.fifaDrawRank;
-          const drawB = b.fifaDrawRank;
-          if (drawA !== null && drawA !== undefined && drawB !== null && drawB !== undefined && drawA !== drawB) {
-            return drawA - drawB;
+          const rankA = a.fifaRank;
+          const rankB = b.fifaRank;
+          if (rankA !== null && rankA !== undefined && rankB !== null && rankB !== undefined && rankA !== rankB) {
+            return rankA - rankB;
           }
         }
 
@@ -660,7 +660,7 @@ const App: React.FC = () => {
         position: index + 1,
         qualified: index < 8
       }));
-  }, [disciplineScores, drawOrder, teamById]);
+  }, [disciplineScores, fifaRanking, teamById]);
 
   const predictedThirdPlaceRows = useMemo(() => {
     return buildThirdPlaceRows(matches, false);
@@ -804,7 +804,7 @@ const App: React.FC = () => {
           scoreB: official?.b ?? null
         };
       });
-      const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, drawOrder);
+      const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, fifaRanking);
       const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
       if (!hasAnyMatch) return;
       const top3 = standings.slice(0, 3).map(s => s.teamId);
@@ -816,7 +816,7 @@ const App: React.FC = () => {
     const officialAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, matches.map(m => {
       const official = officialResults[m.id];
       return { ...m, scoreA: official?.a ?? null, scoreB: official?.b ?? null };
-    }), disciplineScores, drawOrder);
+    }), disciplineScores, fifaRanking);
     const qualifiedThirdGroups = officialAdvanced.bestThirdPlaces.map((team) => team.group);
 
     const resolve = (token: string, currentMatchId?: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
@@ -862,7 +862,7 @@ const App: React.FC = () => {
     };
 
     return resolve(id, sourceMatchId);
-  }, [disciplineScores, drawOrder, matches, officialResults, teamById, knockoutMatches]);
+  }, [disciplineScores, fifaRanking, matches, officialResults, teamById, knockoutMatches]);
 
   const groupResultsTotal = useMemo(() => matches.length, [matches]);
   const groupResultsCount = useMemo(() => {
@@ -943,7 +943,7 @@ const App: React.FC = () => {
             predictionsLocked={predictionsLocked}
             officialResults={officialResults}
             disciplineScores={disciplineScores}
-            drawOrder={drawOrder}
+            fifaRanking={fifaRanking}
             onToggleLock={updatePredictionsLocked}
             onSaveOfficial={saveOfficialResult}
             onSaveTeamTiebreaker={saveTeamTiebreaker}
@@ -1012,7 +1012,7 @@ const App: React.FC = () => {
           predictions={allPredictions}
           officialResults={officialResults}
           disciplineScores={disciplineScores}
-          drawOrder={drawOrder}
+          fifaRanking={fifaRanking}
           loading={rankingLoading}
         />
       </div>
@@ -1053,7 +1053,7 @@ const App: React.FC = () => {
               <div><dt>SG</dt><dd>Saldo de Gols</dd></div>
               <div><dt>GT</dt><dd>Gols Totais</dd></div>
               <div><dt>DISC</dt><dd>Pontos de disciplina</dd></div>
-              <div><dt>FIFA</dt><dd>Ordem do sorteio da FIFA</dd></div>
+              <div><dt>FIFA</dt><dd>Ranking FIFA</dd></div>
             </dl>
           </div>
           <div className="prediction-chips">
@@ -1219,7 +1219,7 @@ const App: React.FC = () => {
                               <td className="is-center">{row.goalsDifference}</td>
                               <td className="is-center">{row.goalsFor}</td>
                               <td className="is-center">{row.disciplineScore ?? '-'}</td>
-                              <td className="is-center">{row.fifaDrawRank ?? '-'}</td>
+                              <td className="is-center">{row.fifaRank ?? '-'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1241,7 +1241,7 @@ const App: React.FC = () => {
                   predictionsLocked={!!predictionsLocked}
                   officialScores={officialResults}
                   disciplineScores={disciplineScores}
-                  drawOrder={drawOrder}
+                  fifaRanking={fifaRanking}
                 />
               ))}
             </div>

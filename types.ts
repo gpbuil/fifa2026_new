@@ -30,7 +30,7 @@ export interface GroupStanding {
 }
 
 export type DisciplineScores = Record<string, number | null | undefined>;
-export type DrawOrder = Record<string, number | null | undefined>;
+export type FifaRanking = Record<string, number | null | undefined>;
 
 export interface Prediction {
   id?: string;

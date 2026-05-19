@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { DisciplineScores, DrawOrder, Match, Team } from '../types';
+import { DisciplineScores, FifaRanking, Match, Team } from '../types';
 import { GROUPS, TEAMS_DATA } from '../data/teams';
 import GroupCard from './GroupCard';
 import KnockoutBracket from './KnockoutBracket';
@@ -27,10 +27,10 @@ interface AdminDashboardProps {
   predictionsLocked: boolean | null;
   officialResults: ScoreMap;
   disciplineScores: DisciplineScores;
-  drawOrder: DrawOrder;
+  fifaRanking: FifaRanking;
   onToggleLock: (next: boolean) => Promise<void>;
   onSaveOfficial: (matchId: string, scoreA: number, scoreB: number) => Promise<void>;
-  onSaveTeamTiebreaker: (teamId: string, conductScore: number | null, drawRank: number | null) => Promise<void>;
+  onSaveTeamTiebreaker: (teamId: string, conductScore: number | null, fifaRank: number | null) => Promise<void>;
   onClearOfficialResults: () => Promise<void>;
   onSendReminder: (userId: string, name: string, missing: number) => Promise<void>;
   onTogglePayment: (userId: string, nextPaid: boolean) => Promise<void>;
@@ -73,7 +73,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   predictionsLocked,
   officialResults,
   disciplineScores,
-  drawOrder,
+  fifaRanking,
   onToggleLock,
   onSaveOfficial,
   onSaveTeamTiebreaker,
@@ -92,7 +92,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [drafts, setDrafts] = useState<ScoreMap>({});
   const [disciplineDrafts, setDisciplineDrafts] = useState<Record<string, string>>({});
-  const [drawOrderDrafts, setDrawOrderDrafts] = useState<Record<string, string>>({});
+  const [fifaRankingDrafts, setFifaRankingDrafts] = useState<Record<string, string>>({});
   const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
   const [savingDisciplineIds, setSavingDisciplineIds] = useState<Record<string, boolean>>({});
   const [disciplineErrors, setDisciplineErrors] = useState<Record<string, string>>({});
@@ -116,16 +116,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     const nextDrafts: Record<string, string> = {};
-    const nextDrawDrafts: Record<string, string> = {};
+    const nextRankingDrafts: Record<string, string> = {};
     TEAMS_DATA.forEach((team) => {
       const score = disciplineScores[team.id];
-      const rank = drawOrder[team.id];
+      const rank = fifaRanking[team.id];
       nextDrafts[team.id] = score === null || score === undefined ? '' : String(score);
-      nextDrawDrafts[team.id] = rank === null || rank === undefined ? '' : String(rank);
+      nextRankingDrafts[team.id] = rank === null || rank === undefined ? '' : String(rank);
     });
     setDisciplineDrafts(nextDrafts);
-    setDrawOrderDrafts(nextDrawDrafts);
-  }, [disciplineScores, drawOrder]);
+    setFifaRankingDrafts(nextRankingDrafts);
+  }, [disciplineScores, fifaRanking]);
 
   const completionRows = useMemo(() => {
     const trackedMatchIds = new Set([...groupMatches, ...knockoutMatches].map((match) => match.id));
@@ -281,20 +281,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return Number.isNaN(parsedValue) ? undefined : parsedValue;
   };
 
-  const handleTiebreakerChange = (teamId: string, field: 'discipline' | 'draw', value: string) => {
+  const handleTiebreakerChange = (teamId: string, field: 'discipline' | 'ranking', value: string) => {
     if (field === 'discipline') {
       setDisciplineDrafts(prev => ({ ...prev, [teamId]: value }));
     } else {
-      setDrawOrderDrafts(prev => ({ ...prev, [teamId]: value }));
+      setFifaRankingDrafts(prev => ({ ...prev, [teamId]: value }));
     }
     setDisciplineErrors(prev => ({ ...prev, [teamId]: '' }));
 
     const nextDiscipline = parseOptionalInteger(field === 'discipline' ? value : disciplineDrafts[teamId] ?? '');
-    const nextDrawRank = parseOptionalInteger(field === 'draw' ? value : drawOrderDrafts[teamId] ?? '');
-    if (nextDiscipline === undefined || nextDrawRank === undefined) return;
+    const nextFifaRank = parseOptionalInteger(field === 'ranking' ? value : fifaRankingDrafts[teamId] ?? '');
+    if (nextDiscipline === undefined || nextFifaRank === undefined) return;
 
     setSavingDisciplineIds(prev => ({ ...prev, [teamId]: true }));
-    onSaveTeamTiebreaker(teamId, nextDiscipline, nextDrawRank)
+    onSaveTeamTiebreaker(teamId, nextDiscipline, nextFifaRank)
       .catch((error) => {
         console.error(error);
         setDisciplineErrors(prev => ({
@@ -629,7 +629,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </span>
             </div>
             <p className="text-sm text-slate-500">
-              Pontuacao FIFA de conduta: maior pontuacao vence. Se ainda empatar, menor ordem de sorteio vence.
+              Pontuacao FIFA de conduta: maior pontuacao vence. Se ainda empatar, melhor ranking FIFA vence.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 min-w-full sm:min-w-[320px] lg:min-w-[360px]">
@@ -652,7 +652,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <th className="px-3 py-2 text-left">Grupo</th>
                   <th className="px-3 py-2 text-left">Selecao</th>
                   <th className="px-3 py-2 text-center">Conduta</th>
-                  <th className="px-3 py-2 text-center">Sorteio</th>
+                  <th className="px-3 py-2 text-center">Ranking FIFA</th>
                   <th className="px-3 py-2 text-left">Status</th>
                 </tr>
               </thead>
@@ -660,7 +660,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {TEAMS_DATA.map((team) => {
                   const isSaving = !!savingDisciplineIds[team.id];
                   const scoreValue = disciplineDrafts[team.id] ?? '';
-                  const drawValue = drawOrderDrafts[team.id] ?? '';
+                  const rankingValue = fifaRankingDrafts[team.id] ?? '';
                   const error = disciplineErrors[team.id];
 
                   return (
@@ -687,10 +687,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           type="number"
                           min="1"
                           inputMode="numeric"
-                          value={drawValue}
-                          onChange={(event) => handleTiebreakerChange(team.id, 'draw', event.target.value)}
+                          value={rankingValue}
+                          onChange={(event) => handleTiebreakerChange(team.id, 'ranking', event.target.value)}
                           className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center text-sm font-black text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                          aria-label={`Ordem de sorteio ${team.name}`}
+                          aria-label={`Ranking FIFA ${team.name}`}
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -698,7 +698,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span className="font-black text-indigo-600">Salvando...</span>
                         ) : error ? (
                           <span className="font-semibold text-red-600">{error}</span>
-                        ) : scoreValue === '' && drawValue === '' ? (
+                        ) : scoreValue === '' && rankingValue === '' ? (
                           <span className="font-semibold text-slate-400">Sem desempate manual</span>
                         ) : (
                           <span className="font-black text-emerald-700">Salvo</span>
@@ -732,7 +732,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               matches={officialGroupMatches.filter(match => match.group === groupLetter)}
               onScoreChange={handleOfficialScoreChange}
               disciplineScores={disciplineScores}
-              drawOrder={drawOrder}
+              fifaRanking={fifaRanking}
             />
           ))}
         </div>
