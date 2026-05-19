@@ -5,7 +5,7 @@ interface KnockoutBracketProps {
   allTeams: Team[];
   knockoutMatches: Match[];
   onScoreChange: (matchId: string, team: 'A' | 'B', value: string) => void;
-  resolvePlaceholder: (id: string) => { team?: Team; label: string };
+  resolvePlaceholder: (id: string, matchId?: string) => { team?: Team; label: string };
   predictionsLocked?: boolean;
   officialScores?: Record<string, { a: number | null; b: number | null }>;
 }
@@ -30,12 +30,13 @@ const FlagImage: React.FC<{ iso2: string; name: string }> = ({ iso2, name }) => 
 
 const TeamLine: React.FC<{
   teamId: string;
+  matchId: string;
   score: number | null | undefined;
   onScoreChange: (val: string) => void;
-  resolve: (id: string) => { team?: Team; label: string };
+  resolve: (id: string, matchId?: string) => { team?: Team; label: string };
   disabled?: boolean;
-}> = ({ teamId, score, onScoreChange, resolve, disabled = false }) => {
-  const { team, label } = resolve(teamId);
+}> = ({ teamId, matchId, score, onScoreChange, resolve, disabled = false }) => {
+  const { team, label } = resolve(teamId, matchId);
 
   return (
     <div className="pv-ko-team-line">
@@ -67,11 +68,12 @@ const TeamLine: React.FC<{
 
 const ComparisonTeamRow: React.FC<{
   teamId: string;
+  matchId: string;
   officialScore: number | null | undefined;
   predictedScore: number | null | undefined;
-  resolve: (id: string) => { team?: Team; label: string };
-}> = ({ teamId, officialScore, predictedScore, resolve }) => {
-  const { team, label } = resolve(teamId);
+  resolve: (id: string, matchId?: string) => { team?: Team; label: string };
+}> = ({ teamId, matchId, officialScore, predictedScore, resolve }) => {
+  const { team, label } = resolve(teamId, matchId);
 
   return (
     <div className="pv-ko-compare-row" data-testid="ko-compare-row">
@@ -148,12 +150,14 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                         </div>
                         <ComparisonTeamRow
                           teamId={match.teamA}
+                          matchId={match.id}
                           officialScore={official?.a}
                           predictedScore={match.scoreA}
                           resolve={resolvePlaceholder}
                         />
                         <ComparisonTeamRow
                           teamId={match.teamB}
+                          matchId={match.id}
                           officialScore={official?.b}
                           predictedScore={match.scoreB}
                           resolve={resolvePlaceholder}
@@ -163,6 +167,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                       <>
                         <TeamLine
                           teamId={match.teamA}
+                          matchId={match.id}
                           score={match.scoreA}
                           onScoreChange={(value) => onScoreChange(match.id, 'A', value)}
                           resolve={resolvePlaceholder}
@@ -170,6 +175,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                         />
                         <TeamLine
                           teamId={match.teamB}
+                          matchId={match.id}
                           score={match.scoreB}
                           onScoreChange={(value) => onScoreChange(match.id, 'B', value)}
                           resolve={resolvePlaceholder}

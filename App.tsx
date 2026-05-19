@@ -10,10 +10,26 @@ import KnockoutBracket from './components/KnockoutBracket';
 import AdminDashboard from './components/AdminDashboard';
 import RankingView from './components/RankingView';
 import { getAdvancedTeams, calculateGroupStandings } from './services/simulator';
+import { getThirdPlaceGroupForMatch } from './data/thirdPlaceMatrix';
 import './components/prediction-view.css';
 
 type ProfileRow = { id: string; full_name: string | null; email?: string | null; bolao_paid?: boolean | null };
 type PredictionRow = { user_id: string; match_id: string; score_a: number | null; score_b: number | null };
+type ThirdPlaceRow = {
+  position: number;
+  qualified: boolean;
+  groupLetter: string;
+  teamId: string;
+  teamName: string;
+  teamIso2: string;
+  played: number;
+  points: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalsDifference: number;
+  disciplineScore?: number | null;
+  fifaDrawRank?: number | null;
+};
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -574,6 +590,96 @@ const App: React.FC = () => {
     return getAdvancedTeams(GROUPS, TEAMS_DATA, matches);
   }, [matches]);
 
+  const buildThirdPlaceRows = useCallback((
+    sourceMatches: Match[],
+    useManualTiebreakers: boolean
+  ): ThirdPlaceRow[] => {
+    const thirdRows = GROUPS.flatMap((groupLetter) => {
+      const groupTeams = TEAMS_DATA.filter((team) => team.group === groupLetter);
+      const groupMatches = sourceMatches.filter((match) => match.group === groupLetter);
+      const hasAnyMatch = groupMatches.some((match) => match.scoreA !== null && match.scoreA !== undefined);
+      if (!hasAnyMatch) return [];
+
+      const standings = calculateGroupStandings(
+        groupTeams,
+        groupMatches,
+        useManualTiebreakers ? disciplineScores : undefined,
+        useManualTiebreakers ? drawOrder : undefined
+      );
+      const standing = standings[2];
+      if (!standing || standing.played <= 0) return [];
+      const team = teamById.get(standing.teamId);
+
+      return [{
+        position: 0,
+        qualified: false,
+        groupLetter,
+        teamId: standing.teamId,
+        teamName: team?.name ?? standing.teamId,
+        teamIso2: team?.iso2 ?? '',
+        played: standing.played,
+        points: standing.points,
+        goalsFor: standing.goalsFor,
+        goalsAgainst: standing.goalsAgainst,
+        goalsDifference: standing.goalsDifference,
+        disciplineScore: disciplineScores[standing.teamId],
+        fifaDrawRank: drawOrder[standing.teamId] ?? FIFA_DRAW_ORDER[standing.teamId]
+      }];
+    });
+
+    return thirdRows
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goalsDifference !== a.goalsDifference) return b.goalsDifference - a.goalsDifference;
+        if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+
+        if (useManualTiebreakers) {
+          const disciplineA = a.disciplineScore;
+          const disciplineB = b.disciplineScore;
+          if (
+            disciplineA !== null
+            && disciplineA !== undefined
+            && disciplineB !== null
+            && disciplineB !== undefined
+            && disciplineB !== disciplineA
+          ) {
+            return disciplineB - disciplineA;
+          }
+
+          const drawA = a.fifaDrawRank;
+          const drawB = b.fifaDrawRank;
+          if (drawA !== null && drawA !== undefined && drawB !== null && drawB !== undefined && drawA !== drawB) {
+            return drawA - drawB;
+          }
+        }
+
+        return GROUPS.indexOf(a.groupLetter) - GROUPS.indexOf(b.groupLetter);
+      })
+      .map((row, index) => ({
+        ...row,
+        position: index + 1,
+        qualified: index < 8
+      }));
+  }, [disciplineScores, drawOrder, teamById]);
+
+  const predictedThirdPlaceRows = useMemo(() => {
+    return buildThirdPlaceRows(matches, false);
+  }, [buildThirdPlaceRows, matches]);
+
+  const officialThirdPlaceRows = useMemo(() => {
+    const officialGroupMatches = matches.map((match) => {
+      const official = officialResults[match.id];
+      return {
+        ...match,
+        scoreA: official?.a ?? null,
+        scoreB: official?.b ?? null
+      };
+    });
+    return buildThirdPlaceRows(officialGroupMatches, true);
+  }, [buildThirdPlaceRows, matches, officialResults]);
+
+  const thirdPlaceRows = predictionsLocked ? officialThirdPlaceRows : predictedThirdPlaceRows;
+
   const knockoutMatches = useMemo(() => {
     const k: Match[] = [];
     R32_STRUCTURE.forEach(struct => {
@@ -617,10 +723,11 @@ const App: React.FC = () => {
     return k;
   }, [knockoutScores, R32_STRUCTURE]);
 
-  const resolvePlaceholder = useCallback((id: string) => {
+  const resolvePlaceholder = useCallback((id: string, sourceMatchId?: string) => {
     const visited = new Set<string>();
+    const qualifiedThirdGroups = bestThirdPlaces.map((team) => team.group);
 
-    const resolve = (token: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
+    const resolve = (token: string, currentMatchId?: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
       if (visited.has(token)) return { label: token };
       visited.add(token);
 
@@ -633,8 +740,9 @@ const App: React.FC = () => {
 
       const thirdMatch = token.match(/^3rd-(\d+)-/i);
       if (thirdMatch) {
-        const index = parseInt(thirdMatch[1], 10) - 1;
-        const team = bestThirdPlaces[index];
+        const matrixGroup = currentMatchId ? getThirdPlaceGroupForMatch(currentMatchId, qualifiedThirdGroups) : null;
+        const teamId = matrixGroup ? groupPlacements.get(`3${matrixGroup}`) : null;
+        const team = teamId ? teamById.get(teamId) : undefined;
         return team ? { team, label: team.name } : { label: token };
       }
 
@@ -644,8 +752,8 @@ const App: React.FC = () => {
         const matchId = wlMatch[2];
         const match = knockoutMatches.find(m => m.id === matchId);
         if (!match) return { label: token };
-        const a = resolve(match.teamA);
-        const b = resolve(match.teamB);
+        const a = resolve(match.teamA, matchId);
+        const b = resolve(match.teamB, matchId);
         const hasScores = match.scoreA !== null && match.scoreA !== undefined && match.scoreB !== null && match.scoreB !== undefined;
         if (!hasScores || !a.team || !b.team) return { label: token };
         if (match.scoreA === match.scoreB) return { label: token };
@@ -660,10 +768,10 @@ const App: React.FC = () => {
       return { label: token };
     };
 
-    return resolve(id);
+    return resolve(id, sourceMatchId);
   }, [bestThirdPlaces, groupPlacements, knockoutMatches, teamById]);
 
-  const resolveOfficialPlaceholder = useCallback((id: string) => {
+  const resolveOfficialPlaceholder = useCallback((id: string, sourceMatchId?: string) => {
     const visited = new Set<string>();
 
     const officialGroupPlacements = new Map<string, string>();
@@ -690,8 +798,9 @@ const App: React.FC = () => {
       const official = officialResults[m.id];
       return { ...m, scoreA: official?.a ?? null, scoreB: official?.b ?? null };
     }), disciplineScores, drawOrder);
+    const qualifiedThirdGroups = officialAdvanced.bestThirdPlaces.map((team) => team.group);
 
-    const resolve = (token: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
+    const resolve = (token: string, currentMatchId?: string): { team?: typeof TEAMS_DATA[number]; label: string } => {
       if (visited.has(token)) return { label: token };
       visited.add(token);
 
@@ -704,8 +813,9 @@ const App: React.FC = () => {
 
       const thirdMatch = token.match(/^3rd-(\d+)-/i);
       if (thirdMatch) {
-        const index = parseInt(thirdMatch[1], 10) - 1;
-        const team = officialAdvanced.bestThirdPlaces[index];
+        const matrixGroup = currentMatchId ? getThirdPlaceGroupForMatch(currentMatchId, qualifiedThirdGroups) : null;
+        const teamId = matrixGroup ? officialGroupPlacements.get(`3${matrixGroup}`) : null;
+        const team = teamId ? teamById.get(teamId) : undefined;
         return team ? { team, label: team.name } : { label: token };
       }
 
@@ -715,8 +825,8 @@ const App: React.FC = () => {
         const matchId = wlMatch[2];
         const match = knockoutMatches.find(m => m.id === matchId);
         if (!match) return { label: token };
-        const a = resolve(match.teamA);
-        const b = resolve(match.teamB);
+        const a = resolve(match.teamA, matchId);
+        const b = resolve(match.teamB, matchId);
         const score = officialResults[matchId];
         const hasScores = score && score.a !== null && score.b !== null;
         if (!hasScores || !a.team || !b.team) return { label: token };
@@ -732,7 +842,7 @@ const App: React.FC = () => {
       return { label: token };
     };
 
-    return resolve(id);
+    return resolve(id, sourceMatchId);
   }, [disciplineScores, drawOrder, matches, officialResults, teamById, knockoutMatches]);
 
   const groupResultsTotal = useMemo(() => matches.length, [matches]);
@@ -956,7 +1066,8 @@ const App: React.FC = () => {
           </div>
         )}
         {view === ViewMode.GROUPS ? (
-          predictionsLocked ? (
+          <>
+          {predictionsLocked ? (
             <div className="pv-groups-blocked-grid" data-testid="groups-blocked-grid">
               {groupCardsData.map((groupCard) => (
                 <section
@@ -1107,7 +1218,84 @@ const App: React.FC = () => {
                 />
               ))}
             </div>
-          )
+          )}
+
+          <section className="pv-third-table-card" data-testid="best-third-places-table">
+            <header className="pv-third-head">
+              <div>
+                <p className="pv-third-kicker">{predictionsLocked ? 'Resultados oficiais' : 'Simulacao do palpite'}</p>
+                <h3 className="pv-third-title">Melhores terceiros</h3>
+              </div>
+              <span className="pv-third-chip">Top 8 avancam</span>
+            </header>
+
+            <div className="pv-third-scroll">
+              <table className="pv-third-table">
+                <thead>
+                  <tr>
+                    <th className="is-center">#</th>
+                    <th>Selecao</th>
+                    <th className="is-center">Grupo</th>
+                    <th className="is-center">J</th>
+                    <th className="is-center">PG</th>
+                    <th className="is-center">SG</th>
+                    <th className="is-center">GT</th>
+                    <th className="is-center">GC</th>
+                    <th className="is-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {thirdPlaceRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="pv-third-empty">
+                        Sem dados suficientes para ordenar os terceiros.
+                      </td>
+                    </tr>
+                  ) : (
+                    thirdPlaceRows.map((row) => (
+                      <tr key={`${row.groupLetter}-${row.teamId}`} className={row.qualified ? 'is-qualified' : 'is-out'} data-testid="best-third-place-row">
+                        <td className="is-center pv-third-position">{row.position}</td>
+                        <td>
+                          <span className="pv-third-team">
+                            {row.teamIso2 ? (
+                              <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamName}`}>
+                                <img
+                                  src={`https://flagcdn.com/w20/${row.teamIso2.toLowerCase()}.png`}
+                                  srcSet={`https://flagcdn.com/w40/${row.teamIso2.toLowerCase()}.png 2x`}
+                                  alt={`Bandeira ${row.teamName}`}
+                                  className="pv-flag"
+                                  loading="lazy"
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = 'none';
+                                    const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                    if (fallback) fallback.style.display = 'inline-flex';
+                                  }}
+                                />
+                                <span className="pv-flag-fallback">{row.teamIso2.toUpperCase().slice(0, 2)}</span>
+                              </span>
+                            ) : null}
+                            <span className="pv-team-name">{row.teamName}</span>
+                          </span>
+                        </td>
+                        <td className="is-center">{row.groupLetter}</td>
+                        <td className="is-center">{row.played}</td>
+                        <td className="is-center">{row.points}</td>
+                        <td className="is-center">{row.goalsDifference}</td>
+                        <td className="is-center">{row.goalsFor}</td>
+                        <td className="is-center">{row.goalsAgainst}</td>
+                        <td className="is-center">
+                          <span className={`pv-third-status ${row.qualified ? 'is-in' : 'is-out'}`}>
+                            {row.qualified ? 'Avanca' : 'Fora'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          </>
         ) : (
           <KnockoutBracket
             allTeams={TEAMS_DATA}

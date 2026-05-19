@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { GROUPS, TEAMS_DATA } from '../data/teams';
+import { getThirdPlaceGroupForMatch } from '../data/thirdPlaceMatrix';
 import { buildUserScoreSummary, PHASE_LABEL, PhaseKey } from '../services/scoring';
 import { calculateGroupStandings, getAdvancedTeams } from '../services/simulator';
 import { DisciplineScores, DrawOrder, Match, Team } from '../types';
@@ -252,9 +253,10 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
   }, [disciplineScores, drawOrder, officialGroupMatches]);
 
   const officialAdvanced = useMemo(() => getAdvancedTeams(GROUPS, TEAMS_DATA, officialGroupMatches, disciplineScores, drawOrder), [disciplineScores, drawOrder, officialGroupMatches]);
+  const qualifiedThirdGroups = useMemo(() => officialAdvanced.bestThirdPlaces.map((team) => team.group), [officialAdvanced.bestThirdPlaces]);
 
   const resolveMatchToken = useCallback(
-    (token: string, visited: Set<string>): Team | null => {
+    (token: string, visited: Set<string>, sourceMatchId?: string): Team | null => {
       if (visited.has(token)) return null;
       visited.add(token);
 
@@ -269,8 +271,9 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
 
       const thirdMatch = token.match(/^3rd-(\d+)-/i);
       if (thirdMatch) {
-        const index = parseInt(thirdMatch[1], 10) - 1;
-        return officialAdvanced.bestThirdPlaces[index] ?? null;
+        const matrixGroup = sourceMatchId ? getThirdPlaceGroupForMatch(sourceMatchId, qualifiedThirdGroups) : null;
+        const teamId = matrixGroup ? officialGroupPlacements.get(`3${matrixGroup}`) : null;
+        return teamId ? teamById.get(teamId) ?? null : null;
       }
 
       const wlMatch = token.match(/^([WL])(\d{2,3})$/i);
@@ -279,8 +282,8 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
         const matchId = wlMatch[2];
         const slots = KNOCKOUT_SLOT_BY_MATCH[matchId];
         if (!slots) return null;
-        const teamA = resolveMatchToken(slots.a, new Set(visited));
-        const teamB = resolveMatchToken(slots.b, new Set(visited));
+        const teamA = resolveMatchToken(slots.a, new Set(visited), matchId);
+        const teamB = resolveMatchToken(slots.b, new Set(visited), matchId);
         const score = officialResults[matchId];
         const hasScore = score && score.a !== null && score.b !== null;
         if (!hasScore || !teamA || !teamB || score.a === score.b) return null;
@@ -291,7 +294,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
 
       return null;
     },
-    [officialAdvanced.bestThirdPlaces, officialGroupPlacements, officialResults]
+    [officialGroupPlacements, officialResults, qualifiedThirdGroups]
   );
 
   const resolveMatchupByMatchId = useCallback(
@@ -316,8 +319,8 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
       }
 
       if (!tokenA || !tokenB) return null;
-      const teamA = resolveMatchToken(tokenA, new Set());
-      const teamB = resolveMatchToken(tokenB, new Set());
+      const teamA = resolveMatchToken(tokenA, new Set(), matchId);
+      const teamB = resolveMatchToken(tokenB, new Set(), matchId);
       if (!teamA || !teamB) return null;
       return { a: teamA, b: teamB };
     },

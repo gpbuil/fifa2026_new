@@ -1,5 +1,6 @@
 import { DisciplineScores, DrawOrder, Match, Team } from '../types';
 import { TEAMS_DATA, GROUPS } from '../data/teams';
+import { getThirdPlaceGroupForMatch } from '../data/thirdPlaceMatrix';
 import { calculateGroupStandings, getAdvancedTeams } from './simulator';
 
 export type PhaseKey = 'groups' | 'r32' | 'r16' | 'qf' | 'sf' | 'third' | 'final';
@@ -227,11 +228,13 @@ const resolveTeam = (
   groupPlacements: Map<string, string>,
   bestThirdPlaces: Team[],
   knockoutMatches: Match[],
-  scoreMap: Record<string, ScoreMapEntry>
+  scoreMap: Record<string, ScoreMapEntry>,
+  sourceMatchId?: string
 ): Team | null => {
   const visited = new Set<string>();
+  const qualifiedThirdGroups = bestThirdPlaces.map((team) => team.group);
 
-  const inner = (id: string): Team | null => {
+  const inner = (id: string, currentMatchId?: string): Team | null => {
     if (visited.has(id)) return null;
     visited.add(id);
 
@@ -243,8 +246,9 @@ const resolveTeam = (
 
     const thirdMatch = id.match(/^3rd-(\d+)-/i);
     if (thirdMatch) {
-      const index = parseInt(thirdMatch[1], 10) - 1;
-      return bestThirdPlaces[index] ?? null;
+      const matrixGroup = currentMatchId ? getThirdPlaceGroupForMatch(currentMatchId, qualifiedThirdGroups) : null;
+      const teamId = matrixGroup ? groupPlacements.get(`3${matrixGroup}`) : null;
+      return teamId ? teamById.get(teamId) ?? null : null;
     }
 
     const wlMatch = id.match(/^([WL])(\d{2,3})$/i);
@@ -253,8 +257,8 @@ const resolveTeam = (
       const matchId = wlMatch[2];
       const match = knockoutMatches.find(m => m.id === matchId);
       if (!match) return null;
-      const a = inner(match.teamA);
-      const b = inner(match.teamB);
+      const a = inner(match.teamA, matchId);
+      const b = inner(match.teamB, matchId);
       const score = scoreMap[matchId];
       if (!a || !b || !score || score.a === null || score.b === null) return null;
       if (score.a === score.b) return null;
@@ -266,7 +270,7 @@ const resolveTeam = (
     return teamById.get(id) ?? null;
   };
 
-  return inner(token);
+  return inner(token, sourceMatchId);
 };
 
 const scoreResult = (
@@ -382,10 +386,10 @@ export const buildUserScoreSummary = (
         const officialMatch = officialKnockoutMatches.find(m => m.id === matchId);
         const userMatch = userKnockoutMatches.find(m => m.id === matchId);
         if (officialMatch && userMatch) {
-          const officialA = resolveTeam(officialMatch.teamA, officialPlacements, officialAdvanced.bestThirdPlaces, officialKnockoutMatches, officialMap);
-          const officialB = resolveTeam(officialMatch.teamB, officialPlacements, officialAdvanced.bestThirdPlaces, officialKnockoutMatches, officialMap);
-          const userA = resolveTeam(userMatch.teamA, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap);
-          const userB = resolveTeam(userMatch.teamB, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap);
+          const officialA = resolveTeam(officialMatch.teamA, officialPlacements, officialAdvanced.bestThirdPlaces, officialKnockoutMatches, officialMap, matchId);
+          const officialB = resolveTeam(officialMatch.teamB, officialPlacements, officialAdvanced.bestThirdPlaces, officialKnockoutMatches, officialMap, matchId);
+          const userA = resolveTeam(userMatch.teamA, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap, matchId);
+          const userB = resolveTeam(userMatch.teamB, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap, matchId);
           if (officialA && userA && officialA.id === userA.id) indicationPoints += indicatorValue;
           if (officialB && userB && officialB.id === userB.id) indicationPoints += indicatorValue;
         }
