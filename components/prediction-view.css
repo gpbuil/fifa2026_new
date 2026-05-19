@@ -280,6 +280,102 @@
   font-weight: 800;
 }
 
+.pv-official-view {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.pv-official-section {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.pv-official-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pv-official-title {
+  margin: 0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--pv-brand);
+  text-transform: uppercase;
+}
+
+.pv-official-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.pv-official-group-card,
+.pv-official-round-card {
+  border: 1px solid var(--pv-soft-border);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pv-official-group-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.28fr);
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.pv-official-rounds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.pv-official-match-list {
+  display: grid;
+}
+
+.pv-official-match-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  border-bottom: 1px solid var(--pv-soft-border);
+  padding: 0.42rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+.pv-official-match-row:last-child {
+  border-bottom: 0;
+}
+
+.pv-official-match-row:nth-child(2n) {
+  background: rgba(20, 42, 84, 0.018);
+}
+
+.pv-official-match-team {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--pv-text);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pv-official-score {
+  justify-self: center;
+  min-width: 54px;
+  border-radius: 0.45rem;
+  padding: 0.18rem 0.34rem;
+  color: var(--pv-brand);
+  background: rgba(20, 42, 84, 0.08);
+  font-weight: 900;
+  text-align: center;
+}
+
 .pv-group-card {
   padding: 0.7rem;
 }
@@ -1084,7 +1180,16 @@
     grid-template-columns: 1fr;
   }
 
+  .pv-official-groups-grid,
+  .pv-official-rounds {
+    grid-template-columns: 1fr;
+  }
+
   .pv-group-blocked-body {
+    grid-template-columns: 1fr;
+  }
+
+  .pv-official-group-body {
     grid-template-columns: 1fr;
   }
 
@@ -1126,5 +1231,16 @@
   .pv-group-results-table td,
   .pv-group-standings-mini-table td {
     font-size: 0.74rem;
+  }
+
+  .pv-official-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pv-official-match-row {
+    grid-template-columns: 58px minmax(0, 1fr) 58px minmax(0, 1fr);
+    gap: 0.28rem;
+    padding-inline: 0.42rem;
   }
 }

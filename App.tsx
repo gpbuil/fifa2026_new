@@ -723,6 +723,25 @@ const App: React.FC = () => {
     return k;
   }, [knockoutScores, R32_STRUCTURE]);
 
+  const officialKnockoutRounds = useMemo(() => {
+    const withOfficialScores = knockoutMatches.map((match) => {
+      const official = officialResults[match.id];
+      return {
+        ...match,
+        scoreA: official?.a ?? null,
+        scoreB: official?.b ?? null
+      };
+    });
+
+    return [
+      { title: 'Rodada de 32', matches: withOfficialScores.filter((match) => parseInt(match.id, 10) >= 73 && parseInt(match.id, 10) <= 88) },
+      { title: 'Rodada de 16', matches: withOfficialScores.filter((match) => parseInt(match.id, 10) >= 89 && parseInt(match.id, 10) <= 96) },
+      { title: 'Quartas', matches: withOfficialScores.filter((match) => parseInt(match.id, 10) >= 97 && parseInt(match.id, 10) <= 100) },
+      { title: 'Semifinais', matches: withOfficialScores.filter((match) => match.id === '101' || match.id === '102') },
+      { title: 'Finais', matches: withOfficialScores.filter((match) => match.id === '103' || match.id === '104') }
+    ];
+  }, [knockoutMatches, officialResults]);
+
   const resolvePlaceholder = useCallback((id: string, sourceMatchId?: string) => {
     const visited = new Set<string>();
     const qualifiedThirdGroups = bestThirdPlaces.map((team) => team.group);
@@ -1012,6 +1031,7 @@ const App: React.FC = () => {
 
             <button onClick={() => setView(ViewMode.GROUPS)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
             <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
+            <button onClick={() => setView(ViewMode.OFFICIAL)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.OFFICIAL ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>RESULTADOS</button>
             <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
               RANKING
             </a>
@@ -1027,7 +1047,7 @@ const App: React.FC = () => {
       <main className="prediction-shell max-w-[1600px] mx-auto px-4 py-8">
         <section className="prediction-top-card">
           <div>
-            <h2 className="prediction-title">Entrada de Resultados</h2>
+            <h2 className="prediction-title">{view === ViewMode.OFFICIAL ? 'Resultados Oficiais' : 'Entrada de Resultados'}</h2>
             <dl className="prediction-legend" aria-label="Legenda da tabela de classificacao">
               <div><dt>PG</dt><dd>Pontos Ganhos</dd></div>
               <div><dt>SG</dt><dd>Saldo de Gols</dd></div>
@@ -1059,8 +1079,15 @@ const App: React.FC = () => {
           <a href="/ranking" className="prediction-mobile-tab">
             Ranking
           </a>
+          <button
+            type="button"
+            className={`prediction-mobile-tab ${view === ViewMode.OFFICIAL ? 'is-active' : ''}`}
+            onClick={() => setView(ViewMode.OFFICIAL)}
+          >
+            Resultados
+          </button>
         </div>
-        {predictionsLocked && (
+        {predictionsLocked && view !== ViewMode.OFFICIAL && (
           <div className="mb-6 bg-amber-50 border border-amber-100 text-amber-700 text-sm font-semibold rounded-xl px-4 py-3">
             Resultados encerrados. Acompanhe a comparação de resultados abaixo!
           </div>
@@ -1296,7 +1323,7 @@ const App: React.FC = () => {
             </div>
           </section>
           </>
-        ) : (
+        ) : view === ViewMode.KNOCKOUT ? (
           <KnockoutBracket
             allTeams={TEAMS_DATA}
             knockoutMatches={knockoutMatches}
@@ -1305,6 +1332,230 @@ const App: React.FC = () => {
             predictionsLocked={!!predictionsLocked}
             officialScores={officialResults}
           />
+        ) : (
+          <section className="pv-official-view" data-testid="official-results-view">
+            <div className="pv-official-section">
+              <header className="pv-official-head">
+                <h3 className="pv-official-title">Fase de grupos</h3>
+                <span className="pv-third-chip">{groupResultsCount} de {groupResultsTotal} resultados</span>
+              </header>
+              <div className="pv-official-groups-grid">
+                {groupCardsData.map((groupCard) => (
+                  <article key={groupCard.groupLetter} className="pv-official-group-card">
+                    <header className="pv-group-blocked-head">
+                      <h4 className="pv-group-title">Grupo {groupCard.groupLetter}</h4>
+                      <span className="pv-group-chip">{groupCard.resultRows.length} jogos</span>
+                    </header>
+                    <div className="pv-official-group-body">
+                      <div className="pv-group-blocked-results">
+                        <table className="pv-group-results-table">
+                          <thead>
+                            <tr>
+                              <th>Jogo</th>
+                              <th className="is-center">Oficial</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {groupCard.resultRows.map((row) => (
+                              <tr key={row.matchId}>
+                                <td>
+                                  <div className="pv-tracking-matchup">
+                                    <span className="pv-tracking-team pv-tracking-team-a">
+                                      {row.teamA && (
+                                        <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamA.name}`}>
+                                          <img
+                                            src={`https://flagcdn.com/w20/${row.teamA.iso2.toLowerCase()}.png`}
+                                            srcSet={`https://flagcdn.com/w40/${row.teamA.iso2.toLowerCase()}.png 2x`}
+                                            alt={`Bandeira ${row.teamA.name}`}
+                                            className="pv-flag"
+                                            loading="lazy"
+                                            onError={(event) => {
+                                              event.currentTarget.style.display = 'none';
+                                              const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                              if (fallback) fallback.style.display = 'inline-flex';
+                                            }}
+                                          />
+                                          <span className="pv-flag-fallback">{row.teamA.iso2.toUpperCase().slice(0, 2)}</span>
+                                        </span>
+                                      )}
+                                      <span className="pv-team-name">{row.teamA?.name ?? '-'}</span>
+                                    </span>
+                                    <span className="pv-tracking-vs">vs</span>
+                                    <span className="pv-tracking-team pv-tracking-team-b">
+                                      {row.teamB && (
+                                        <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamB.name}`}>
+                                          <img
+                                            src={`https://flagcdn.com/w20/${row.teamB.iso2.toLowerCase()}.png`}
+                                            srcSet={`https://flagcdn.com/w40/${row.teamB.iso2.toLowerCase()}.png 2x`}
+                                            alt={`Bandeira ${row.teamB.name}`}
+                                            className="pv-flag"
+                                            loading="lazy"
+                                            onError={(event) => {
+                                              event.currentTarget.style.display = 'none';
+                                              const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                              if (fallback) fallback.style.display = 'inline-flex';
+                                            }}
+                                          />
+                                          <span className="pv-flag-fallback">{row.teamB.iso2.toUpperCase().slice(0, 2)}</span>
+                                        </span>
+                                      )}
+                                      <span className="pv-team-name">{row.teamB?.name ?? '-'}</span>
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="is-center">
+                                  {row.officialA !== null && row.officialB !== null ? `${row.officialA} x ${row.officialB}` : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="pv-group-blocked-standings">
+                        <table className="pv-group-standings-mini-table is-expanded">
+                          <thead>
+                            <tr>
+                              <th className="is-center">Sel.</th>
+                              <th className="is-center">PG</th>
+                              <th className="is-center">SG</th>
+                              <th className="is-center">GT</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {groupCard.standings.map((row) => (
+                              <tr key={`${groupCard.groupLetter}-${row.teamId}`}>
+                                <td className="is-center" title={row.teamName}>
+                                  {row.teamIso2 ? (
+                                    <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamName}`}>
+                                      <img
+                                        src={`https://flagcdn.com/w20/${row.teamIso2.toLowerCase()}.png`}
+                                        srcSet={`https://flagcdn.com/w40/${row.teamIso2.toLowerCase()}.png 2x`}
+                                        alt={`Bandeira ${row.teamName}`}
+                                        className="pv-flag"
+                                        loading="lazy"
+                                        onError={(event) => {
+                                          event.currentTarget.style.display = 'none';
+                                          const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                          if (fallback) fallback.style.display = 'inline-flex';
+                                        }}
+                                      />
+                                      <span className="pv-flag-fallback">{row.teamIso2.toUpperCase().slice(0, 2)}</span>
+                                    </span>
+                                  ) : null}
+                                </td>
+                                <td className="is-center">{row.points}</td>
+                                <td className="is-center">{row.goalsDifference}</td>
+                                <td className="is-center">{row.goalsFor}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <section className="pv-third-table-card" data-testid="official-best-third-places-table">
+              <header className="pv-third-head">
+                <div>
+                  <p className="pv-third-kicker">Resultados oficiais</p>
+                  <h3 className="pv-third-title">Melhores terceiros</h3>
+                </div>
+                <span className="pv-third-chip">Top 8 avancam</span>
+              </header>
+              <div className="pv-third-scroll">
+                <table className="pv-third-table">
+                  <thead>
+                    <tr>
+                      <th className="is-center">#</th>
+                      <th>Selecao</th>
+                      <th className="is-center">Grupo</th>
+                      <th className="is-center">J</th>
+                      <th className="is-center">PG</th>
+                      <th className="is-center">SG</th>
+                      <th className="is-center">GT</th>
+                      <th className="is-center">GC</th>
+                      <th className="is-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {officialThirdPlaceRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="pv-third-empty">Sem resultados oficiais suficientes para ordenar os terceiros.</td>
+                      </tr>
+                    ) : (
+                      officialThirdPlaceRows.map((row) => (
+                        <tr key={`${row.groupLetter}-${row.teamId}`} className={row.qualified ? 'is-qualified' : 'is-out'}>
+                          <td className="is-center pv-third-position">{row.position}</td>
+                          <td>
+                            <span className="pv-third-team">
+                              {row.teamIso2 ? (
+                                <span className="pv-flag-wrap" aria-label={`Bandeira ${row.teamName}`}>
+                                  <img
+                                    src={`https://flagcdn.com/w20/${row.teamIso2.toLowerCase()}.png`}
+                                    srcSet={`https://flagcdn.com/w40/${row.teamIso2.toLowerCase()}.png 2x`}
+                                    alt={`Bandeira ${row.teamName}`}
+                                    className="pv-flag"
+                                    loading="lazy"
+                                    onError={(event) => {
+                                      event.currentTarget.style.display = 'none';
+                                      const fallback = event.currentTarget.nextElementSibling as HTMLElement | null;
+                                      if (fallback) fallback.style.display = 'inline-flex';
+                                    }}
+                                  />
+                                  <span className="pv-flag-fallback">{row.teamIso2.toUpperCase().slice(0, 2)}</span>
+                                </span>
+                              ) : null}
+                              <span className="pv-team-name">{row.teamName}</span>
+                            </span>
+                          </td>
+                          <td className="is-center">{row.groupLetter}</td>
+                          <td className="is-center">{row.played}</td>
+                          <td className="is-center">{row.points}</td>
+                          <td className="is-center">{row.goalsDifference}</td>
+                          <td className="is-center">{row.goalsFor}</td>
+                          <td className="is-center">{row.goalsAgainst}</td>
+                          <td className="is-center">
+                            <span className={`pv-third-status ${row.qualified ? 'is-in' : 'is-out'}`}>{row.qualified ? 'Avanca' : 'Fora'}</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div className="pv-official-section">
+              <header className="pv-official-head">
+                <h3 className="pv-official-title">Mata-mata</h3>
+                <span className="pv-third-chip">Todas as fases</span>
+              </header>
+              <div className="pv-official-rounds">
+                {officialKnockoutRounds.map((round) => (
+                  <article key={round.title} className="pv-official-round-card">
+                    <header className="pv-round-head">{round.title}</header>
+                    <div className="pv-official-match-list">
+                      {round.matches.map((match) => {
+                        const teamA = resolveOfficialPlaceholder(match.teamA, match.id);
+                        const teamB = resolveOfficialPlaceholder(match.teamB, match.id);
+                        return (
+                          <div key={match.id} className="pv-official-match-row">
+                            <span className="pv-ko-match-tag">Jogo {match.id}</span>
+                            <span className="pv-official-match-team">{teamA.team?.name ?? teamA.label}</span>
+                            <span className="pv-official-score">{match.scoreA !== null && match.scoreB !== null ? `${match.scoreA} x ${match.scoreB}` : '-'}</span>
+                            <span className="pv-official-match-team">{teamB.team?.name ?? teamB.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
         )}
       </main>
     </div>

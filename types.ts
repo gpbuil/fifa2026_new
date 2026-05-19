@@ -44,5 +44,6 @@ export interface Prediction {
 export enum ViewMode {
   GROUPS = 'groups',
   KNOCKOUT = 'knockout',
+  OFFICIAL = 'official',
   AUTH = 'auth'
 }
