@@ -365,6 +365,13 @@
   white-space: nowrap;
 }
 
+.pv-official-match-team.is-placeholder {
+  color: var(--pv-soft);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .pv-official-score {
   justify-self: center;
   min-width: 54px;

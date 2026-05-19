@@ -1544,9 +1544,9 @@ const App: React.FC = () => {
                         return (
                           <div key={match.id} className="pv-official-match-row">
                             <span className="pv-ko-match-tag">Jogo {match.id}</span>
-                            <span className="pv-official-match-team">{teamA.team?.name ?? teamA.label}</span>
+                            <span className={`pv-official-match-team ${teamA.team ? '' : 'is-placeholder'}`}>{teamA.team?.name ?? match.teamA}</span>
                             <span className="pv-official-score">{match.scoreA !== null && match.scoreB !== null ? `${match.scoreA} x ${match.scoreB}` : '-'}</span>
-                            <span className="pv-official-match-team">{teamB.team?.name ?? teamB.label}</span>
+                            <span className={`pv-official-match-team ${teamB.team ? '' : 'is-placeholder'}`}>{teamB.team?.name ?? match.teamB}</span>
                           </div>
                         );
                       })}
