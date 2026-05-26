@@ -28,7 +28,7 @@ const RESULT_POINTS: Record<PhaseKey, Record<string, number | null>> = {
     winnerGoals: 10,
     winnerOnly: 5,
     loserGoals: 7,
-    drawDiff: 8
+    drawDiff: null
   },
   r16: {
     exact: 20,

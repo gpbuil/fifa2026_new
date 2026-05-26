@@ -85,7 +85,7 @@ const LEGEND_PHASE_POINTS: Record<
   { exact: number; winnerGoals: number; loserGoals: number; winnerOnly: number; drawDiff: number | null; indication: number | null }
 > = {
   groups: { exact: 10, winnerGoals: 5, loserGoals: 5, winnerOnly: 3, drawDiff: 4, indication: null },
-  r32: { exact: 15, winnerGoals: 10, loserGoals: 7, winnerOnly: 5, drawDiff: 8, indication: 3 },
+  r32: { exact: 15, winnerGoals: 10, loserGoals: 7, winnerOnly: 5, drawDiff: null, indication: 3 },
   r16: { exact: 20, winnerGoals: 13, loserGoals: 10, winnerOnly: 8, drawDiff: null, indication: 5 },
   qf: { exact: 25, winnerGoals: 16, loserGoals: 13, winnerOnly: 11, drawDiff: null, indication: 10 },
   sf: { exact: 30, winnerGoals: 19, loserGoals: 16, winnerOnly: 14, drawDiff: null, indication: 10 },
