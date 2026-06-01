@@ -589,7 +589,7 @@ const App: React.FC = () => {
     GROUPS.forEach(groupLetter => {
       const groupTeams = TEAMS_DATA.filter(t => t.group === groupLetter);
       const groupMatches = matches.filter(m => m.group === groupLetter);
-      const standings = calculateGroupStandings(groupTeams, groupMatches);
+      const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, fifaRanking);
       const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
       if (!hasAnyMatch) return;
       const top3 = standings.slice(0, 3).map(s => s.teamId);
@@ -598,11 +598,11 @@ const App: React.FC = () => {
       if (top3[2]) map.set(`3${groupLetter}`, top3[2]);
     });
     return map;
-  }, [matches]);
+  }, [disciplineScores, fifaRanking, matches]);
 
   const { bestThirdPlaces } = useMemo(() => {
-    return getAdvancedTeams(GROUPS, TEAMS_DATA, matches);
-  }, [matches]);
+    return getAdvancedTeams(GROUPS, TEAMS_DATA, matches, disciplineScores, fifaRanking);
+  }, [disciplineScores, fifaRanking, matches]);
 
   const buildThirdPlaceRows = useCallback((
     sourceMatches: Match[],
@@ -677,7 +677,7 @@ const App: React.FC = () => {
   }, [disciplineScores, fifaRanking, teamById]);
 
   const predictedThirdPlaceRows = useMemo(() => {
-    return buildThirdPlaceRows(matches, false);
+    return buildThirdPlaceRows(matches, true);
   }, [buildThirdPlaceRows, matches]);
 
   const officialThirdPlaceRows = useMemo(() => {
