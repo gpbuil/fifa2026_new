@@ -194,6 +194,24 @@ const App: React.FC = () => {
         return fallbackData ?? [];
       };
 
+      const fetchPredictionsRows = async (): Promise<PredictionRow[]> => {
+        const pageSize = 1000;
+        const rows: PredictionRow[] = [];
+
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .from('predictions')
+            .select('user_id, match_id, score_a, score_b')
+            .range(from, from + pageSize - 1);
+
+          if (error) throw error;
+          rows.push(...((data ?? []) as PredictionRow[]));
+          if (!data || data.length < pageSize) break;
+        }
+
+        return rows;
+      };
+
       const fetchRankingRows = async () => {
         const pageSize = 1000;
         const rows: any[] = [];
@@ -250,7 +268,7 @@ const App: React.FC = () => {
       } else {
         const [{ data: profilesData, error: profilesError }, { data: predictionsData, error: predictionsError }] = await Promise.all([
           fetchProfiles().then(data => ({ data, error: null as null })).catch(error => ({ data: null, error })),
-          supabase.from('predictions').select('user_id, match_id, score_a, score_b')
+          fetchPredictionsRows().then(data => ({ data, error: null as null })).catch(error => ({ data: null, error }))
         ]);
         if (profilesError) throw profilesError;
         if (predictionsError) throw predictionsError;
