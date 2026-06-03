@@ -194,7 +194,26 @@ const App: React.FC = () => {
         return fallbackData ?? [];
       };
 
-      const { data: rankingRows, error: rankingRpcError } = await supabase.rpc('get_ranking_rows');
+      const fetchRankingRows = async () => {
+        const pageSize = 1000;
+        const rows: any[] = [];
+
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .rpc('get_ranking_rows')
+            .range(from, from + pageSize - 1);
+
+          if (error) throw error;
+          rows.push(...(data ?? []));
+          if (!data || data.length < pageSize) break;
+        }
+
+        return rows;
+      };
+
+      const { data: rankingRows, error: rankingRpcError } = await fetchRankingRows()
+        .then(data => ({ data, error: null as null }))
+        .catch(error => ({ data: null, error }));
 
       if (!rankingRpcError && Array.isArray(rankingRows) && rankingRows.length > 0) {
         const rowByUser = new Map<string, ProfileRow>();
