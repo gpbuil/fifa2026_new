@@ -375,13 +375,14 @@ const App: React.FC = () => {
     if (!session?.user?.id) return;
     if (predictionsLocked) return;
     try {
-      await supabase.from('predictions').upsert({
+      const { error } = await supabase.from('predictions').upsert({
         user_id: session.user.id, 
         match_id: matchId, 
         score_a: scoreA, 
         score_b: scoreB, 
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,match_id' });
+      if (error) throw error;
     } catch (e) {
       console.error("Erro ao salvar palpite:", e);
     }
@@ -965,6 +966,7 @@ const App: React.FC = () => {
             onSendReminder={sendCompletionReminder}
             onTogglePayment={updateProfilePaymentStatus}
             onDeletePlayer={deletePlayer}
+            onRefreshCompletion={fetchRankingData}
             currentUserId={session?.user?.id ?? null}
             groupMatches={matches}
             knockoutMatches={knockoutMatches}

@@ -35,6 +35,7 @@ interface AdminDashboardProps {
   onSendReminder: (userId: string, name: string, missing: number) => Promise<void>;
   onTogglePayment: (userId: string, nextPaid: boolean) => Promise<void>;
   onDeletePlayer: (userId: string) => Promise<void>;
+  onRefreshCompletion: () => Promise<void>;
   currentUserId: string | null;
   groupMatches: Match[];
   knockoutMatches: Match[];
@@ -83,6 +84,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSendReminder,
   onTogglePayment,
   onDeletePlayer,
+  onRefreshCompletion,
   currentUserId,
   groupMatches,
   knockoutMatches,
@@ -443,6 +445,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
         </button>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={onRefreshCompletion}
+            disabled={completionLoading}
+            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {completionLoading ? 'Atualizando...' : 'Atualizar progresso'}
+          </button>
+        </div>
 
         {completionExpanded && (
           <div id="admin-completion-content" className="mt-5">
