@@ -202,6 +202,8 @@ const App: React.FC = () => {
           const { data, error } = await supabase
             .from('predictions')
             .select('user_id, match_id, score_a, score_b')
+            .order('user_id', { ascending: true })
+            .order('match_id', { ascending: true })
             .range(from, from + pageSize - 1);
 
           if (error) throw error;

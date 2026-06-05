@@ -105,6 +105,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [clearingResults, setClearingResults] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
   const [completionExpanded, setCompletionExpanded] = useState(false);
+  const [expandedMissingRows, setExpandedMissingRows] = useState<Record<string, boolean>>({});
   const [disciplineExpanded, setDisciplineExpanded] = useState(false);
   const [reminderStatus, setReminderStatus] = useState<Record<string, 'sending' | 'sent' | 'error'>>({});
   const [reminderErrors, setReminderErrors] = useState<Record<string, string>>({});
@@ -135,9 +136,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setFifaRankingDrafts(nextRankingDrafts);
   }, [disciplineScores, fifaRanking]);
 
+  const describeTeamToken = (token: string, matchId: string) => {
+    const team = TEAMS_DATA.find((item) => item.id === token);
+    if (team) return team.name;
+
+    const placementMatch = token.match(/^([123])([A-L])$/);
+    if (placementMatch) {
+      const [, place, group] = placementMatch;
+      const placeLabel = place === '1' ? '1o' : place === '2' ? '2o' : '3o';
+      return `${placeLabel} Grupo ${group}`;
+    }
+
+    const sourceMatch = token.match(/^([WL])(\d+)$/);
+    if (sourceMatch) {
+      return `${sourceMatch[1] === 'W' ? 'Vencedor' : 'Perdedor'} jogo ${sourceMatch[2]}`;
+    }
+
+    if (token.startsWith('3rd-')) {
+      return '3o colocado definido pela matriz';
+    }
+
+    return resolvePlaceholder(token).label || token || `Jogo ${matchId}`;
+  };
+
+  const describeMissingMatch = (match: Match) => {
+    const prefix = match.group === 'KO' ? `Jogo ${match.id}` : `Grupo ${match.group}`;
+    const teamA = describeTeamToken(match.teamA, match.id);
+    const teamB = describeTeamToken(match.teamB, match.id);
+
+    return {
+      id: match.id,
+      label: `${prefix}: ${teamA} x ${teamB}`
+    };
+  };
+
   const completionRows = useMemo(() => {
-    const trackedMatchIds = new Set([...groupMatches, ...knockoutMatches].map((match) => match.id));
-    const totalMatches = trackedMatchIds.size;
+    const trackedMatches = [...groupMatches, ...knockoutMatches];
+    const trackedMatchIds = new Set(trackedMatches.map((match) => match.id));
+    const totalMatches = trackedMatches.length;
     const completedByUser = new Map<string, Set<string>>();
 
     predictions.forEach((prediction) => {
@@ -149,7 +185,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     const rows = profiles
       .map((profile) => {
-        const completed = completedByUser.get(profile.id)?.size ?? 0;
+        const completedMatches = completedByUser.get(profile.id) ?? new Set<string>();
+        const completed = completedMatches.size;
+        const missingMatches = trackedMatches
+          .filter((match) => !completedMatches.has(match.id))
+          .map(describeMissingMatch);
         const percent = totalMatches > 0 ? Math.round((completed / totalMatches) * 100) : 0;
 
         return {
@@ -159,6 +199,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           paid: !!profile.bolao_paid,
           completed,
           missing: Math.max(0, totalMatches - completed),
+          missingMatches,
           percent,
           totalMatches
         };
@@ -178,7 +219,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
       return a.name.localeCompare(b.name) * direction;
     });
-  }, [completionSort, groupMatches, knockoutMatches, predictions, profiles]);
+  }, [completionSort, groupMatches, knockoutMatches, predictions, profiles, resolvePlaceholder]);
 
   const completionSummary = useMemo(() => {
     const totalPlayers = completionRows.length;
@@ -504,6 +545,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {deleteErrors[row.id] && (
                         <div className="mt-1 text-[11px] font-semibold text-red-600">{deleteErrors[row.id]}</div>
                       )}
+                      {!isComplete && (
+                        <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedMissingRows(prev => ({ ...prev, [row.id]: !prev[row.id] }))}
+                            className="flex w-full items-center justify-between gap-3 text-left text-[11px] font-black text-amber-800"
+                            aria-expanded={!!expandedMissingRows[row.id]}
+                          >
+                            <span>{expandedMissingRows[row.id] ? 'Ocultar jogos faltantes' : 'Ver jogos faltantes'}</span>
+                            <span>{row.missing}</span>
+                          </button>
+                          {expandedMissingRows[row.id] && (
+                            <ul className="mt-2 space-y-1 border-t border-amber-100 pt-2 text-[11px] font-semibold text-slate-700">
+                              {row.missingMatches.map((match) => (
+                                <li key={match.id}>{match.label}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
 
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         {isComplete ? (
@@ -595,8 +656,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       const paymentIsSaving = paymentStatus[row.id] === 'saving';
                       const deleteIsRunning = deleteStatus[row.id] === 'deleting';
                       const isCurrentUser = row.id === currentUserId;
+                      const isMissingExpanded = !!expandedMissingRows[row.id];
                       return (
-                        <tr key={row.id} className={isComplete ? 'bg-emerald-50/30' : 'bg-white'}>
+                        <React.Fragment key={row.id}>
+                        <tr className={isComplete ? 'bg-emerald-50/30' : 'bg-white'}>
                           <td className="px-3 py-2">
                             <div className="max-w-[220px] truncate font-black text-slate-900" title={row.name}>
                               {row.name}
@@ -637,7 +700,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {row.completed}/{row.totalMatches}
                           </td>
                           <td className={`px-3 py-2 text-center font-black ${isComplete ? 'text-emerald-700' : 'text-amber-700'}`}>
-                            {row.missing}
+                            {isComplete ? (
+                              row.missing
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedMissingRows(prev => ({ ...prev, [row.id]: !prev[row.id] }))}
+                                className="inline-flex min-w-[76px] items-center justify-center gap-2 rounded-lg bg-amber-100 px-3 py-1.5 text-[11px] font-black text-amber-800 transition-all hover:bg-amber-200"
+                                aria-expanded={isMissingExpanded}
+                              >
+                                <span>{row.missing}</span>
+                                <span>{isMissingExpanded ? 'Ocultar' : 'Ver'}</span>
+                              </button>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right">
                             {isComplete ? (
@@ -680,6 +755,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             </button>
                           </td>
                         </tr>
+                        {isMissingExpanded && !isComplete && (
+                          <tr className="bg-amber-50/60">
+                            <td colSpan={7} className="px-3 py-3">
+                              <div className="rounded-lg border border-amber-100 bg-white px-4 py-3">
+                                <div className="mb-2 text-[10px] font-black uppercase tracking-widest text-amber-700">
+                                  Jogos faltantes de {row.name}
+                                </div>
+                                <div className="grid gap-1 text-xs font-semibold text-slate-700 lg:grid-cols-2">
+                                  {row.missingMatches.map((match) => (
+                                    <div key={match.id}>{match.label}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
