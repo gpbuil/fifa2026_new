@@ -106,7 +106,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
                       <input
                         type="number"
                         min="0"
-                        placeholder="0"
+                        placeholder="-"
                         value={match.scoreA === null ? '' : match.scoreA}
                         onChange={(event) => onScoreChange(match.id, 'A', event.target.value)}
                         disabled={predictionsLocked}
@@ -116,7 +116,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
                       <input
                         type="number"
                         min="0"
-                        placeholder="0"
+                        placeholder="-"
                         value={match.scoreB === null ? '' : match.scoreB}
                         onChange={(event) => onScoreChange(match.id, 'B', event.target.value)}
                         disabled={predictionsLocked}

@@ -48,6 +48,7 @@ const App: React.FC = () => {
   const [allPredictions, setAllPredictions] = useState<PredictionRow[]>([]);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showIncompleteGroupsModal, setShowIncompleteGroupsModal] = useState(false);
 
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
   const isAdminRoute = pathname.startsWith('/admin');
@@ -56,6 +57,17 @@ const App: React.FC = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!showIncompleteGroupsModal) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowIncompleteGroupsModal(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showIncompleteGroupsModal]);
 
   console.log("App renderizado. Reset Mode:", isResettingPassword);
 
@@ -576,6 +588,27 @@ const App: React.FC = () => {
     return map;
   }, []);
 
+  const incompleteGroupMatches = useMemo(() => {
+    return matches
+      .filter((match) => match.scoreA === null || match.scoreA === undefined || match.scoreB === null || match.scoreB === undefined)
+      .map((match) => ({
+        id: match.id,
+        group: match.group,
+        teamA: teamById.get(match.teamA)?.name ?? match.teamA,
+        teamB: teamById.get(match.teamB)?.name ?? match.teamB
+      }));
+  }, [matches, teamById]);
+
+  const openKnockoutView = () => {
+    if (!predictionsLocked && incompleteGroupMatches.length > 0) {
+      setView(ViewMode.GROUPS);
+      setShowIncompleteGroupsModal(true);
+      return;
+    }
+
+    setView(ViewMode.KNOCKOUT);
+  };
+
   const groupCardsData = useMemo(() => {
     return GROUPS.map((groupLetter) => {
       const groupTeams = TEAMS_DATA.filter((team) => team.group === groupLetter);
@@ -1087,7 +1120,7 @@ const App: React.FC = () => {
           <div className="hidden md:flex gap-2">
 
             <button onClick={() => setView(ViewMode.GROUPS)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.GROUPS ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>GRUPOS</button>
-            <button onClick={() => setView(ViewMode.KNOCKOUT)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
+            <button onClick={openKnockoutView} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.KNOCKOUT ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>MATA-MATA</button>
             <button onClick={() => setView(ViewMode.OFFICIAL)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${view === ViewMode.OFFICIAL ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-100'}`}>RESULTADOS</button>
             <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
               RANKING
@@ -1101,6 +1134,61 @@ const App: React.FC = () => {
           <button onClick={() => supabase.auth.signOut()} className="hidden md:inline-flex text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
         </div>
       </nav>
+      {showIncompleteGroupsModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 px-4 py-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="incomplete-groups-title"
+          onClick={() => setShowIncompleteGroupsModal(false)}
+        >
+          <section
+            className="w-full max-w-2xl overflow-hidden rounded-lg border-2 border-red-700 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="flex items-start gap-4 bg-red-700 px-5 py-5 text-white">
+              <span
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white text-xl font-black"
+                aria-hidden="true"
+              >
+                !
+              </span>
+              <div className="min-w-0">
+                <h2 id="incomplete-groups-title" className="text-lg font-black">
+                  Ainda faltam placares na fase de grupos
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-red-100">
+                  Preencha os dois campos de gols em cada jogo antes de montar o mata-mata.
+                </p>
+              </div>
+              <span className="ml-auto shrink-0 rounded-md bg-red-900/50 px-2.5 py-1 text-xs font-black">
+                {incompleteGroupMatches.length} faltando
+              </span>
+            </header>
+
+            <div className="max-h-[55vh] overflow-y-auto px-5 py-4">
+              <ul className="divide-y divide-red-100 border-y border-red-100">
+                {incompleteGroupMatches.map((match) => (
+                  <li key={match.id} className="grid grid-cols-[72px_1fr] gap-3 py-3 text-sm">
+                    <span className="font-black text-red-700">Grupo {match.group}</span>
+                    <span className="font-bold text-slate-800">{match.teamA} x {match.teamB}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <footer className="flex justify-end border-t border-red-100 bg-red-50 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setShowIncompleteGroupsModal(false)}
+                className="rounded-lg bg-red-700 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-200"
+              >
+                Voltar e preencher
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
       <main className="prediction-shell max-w-[1600px] mx-auto px-4 py-8">
         <section className="prediction-top-card">
           <div>
@@ -1129,7 +1217,7 @@ const App: React.FC = () => {
           <button
             type="button"
             className={`prediction-mobile-tab ${view === ViewMode.KNOCKOUT ? 'is-active' : ''}`}
-            onClick={() => setView(ViewMode.KNOCKOUT)}
+            onClick={openKnockoutView}
           >
             Mata-mata
           </button>
