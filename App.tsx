@@ -9,6 +9,7 @@ import GroupCard from './components/GroupCard';
 import KnockoutBracket from './components/KnockoutBracket';
 import AdminDashboard from './components/AdminDashboard';
 import RankingView from './components/RankingView';
+import PlayerPredictionsView from './components/PlayerPredictionsView';
 import { getAdvancedTeams, calculateGroupStandings } from './services/simulator';
 import { getThirdPlaceGroupForMatch } from './data/thirdPlaceMatrix';
 import './components/prediction-view.css';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
   const isAdminRoute = pathname.startsWith('/admin');
   const isRankingRoute = pathname.startsWith('/ranking');
+  const isPlayerPredictionsRoute = pathname.startsWith('/palpites');
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -419,8 +421,8 @@ const App: React.FC = () => {
   }, [fetchSettings, fetchOfficialResults, fetchDisciplineScores]);
 
   useEffect(() => {
-    if (isRankingRoute || (isAdminRoute && isAdmin)) fetchRankingData();
-  }, [isRankingRoute, isAdminRoute, isAdmin, fetchRankingData]);
+    if (isRankingRoute || isPlayerPredictionsRoute || (isAdminRoute && isAdmin)) fetchRankingData();
+  }, [isRankingRoute, isPlayerPredictionsRoute, isAdminRoute, isAdmin, fetchRankingData]);
 
   const savePrediction = async (matchId: string, scoreA: number, scoreB: number) => {
     if (!session?.user?.id) return;
@@ -1066,6 +1068,7 @@ const App: React.FC = () => {
             </div>
             <div className="hidden md:flex gap-2">
               <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">VOLTAR AOS SEUS RESULTADOS</a>
+              <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">PALPITES</a>
               {isAdmin && (
                 <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ADMIN</a>
               )}
@@ -1089,6 +1092,7 @@ const App: React.FC = () => {
             <div className="md:hidden absolute left-0 right-0 top-full border-b border-slate-200 bg-white shadow-lg">
               <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-col gap-2">
                 <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Voltar aos seus resultados</a>
+                <a href="/palpites" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Palpites</a>
                 {isAdmin && (
                   <a href="/admin" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Admin</a>
                 )}
@@ -1104,6 +1108,59 @@ const App: React.FC = () => {
           disciplineScores={disciplineScores}
           fifaRanking={fifaRanking}
           loading={rankingLoading}
+          currentUserId={session?.user?.id ?? null}
+        />
+      </div>
+    );
+  }
+
+  if (isPlayerPredictionsRoute) {
+    return (
+      <div className="min-h-screen bg-slate-50 pb-20">
+        <nav className="sticky top-0 z-50 glass border-b border-slate-200 relative">
+          <div className="max-w-[1600px] mx-auto px-4 h-20 md:h-24 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <img src="/logobolao.png" alt="Bolao" className="h-14 w-14 md:h-20 md:w-20 object-contain" />
+              <span className="truncate font-black text-sm md:text-lg text-indigo-900 leading-none tracking-tighter">BOLAO DA COPA DO MANDUCA</span>
+            </div>
+            <div className="hidden md:flex gap-2">
+              <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-100">SEUS RESULTADOS</a>
+              <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-100">RANKING</a>
+              {isAdmin && <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold text-indigo-600 hover:bg-indigo-50">ADMIN</a>}
+              <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
+            </div>
+            <button
+              type="button"
+              className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Abrir menu"
+            >
+              <span className="flex flex-col gap-1.5">
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+              </span>
+            </button>
+          </div>
+          {mobileMenuOpen && (
+            <div className="md:hidden absolute left-0 right-0 top-full border-b border-slate-200 bg-white shadow-lg">
+              <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-col gap-2">
+                <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Seus resultados</a>
+                <a href="/ranking" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Ranking</a>
+                {isAdmin && <a href="/admin" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Admin</a>}
+                <button onClick={() => supabase.auth.signOut()} className="rounded-xl px-4 py-3 text-left text-sm font-black text-red-600 hover:bg-red-50">Sair</button>
+              </div>
+            </div>
+          )}
+        </nav>
+        <PlayerPredictionsView
+          profiles={profiles}
+          predictions={allPredictions}
+          disciplineScores={disciplineScores}
+          fifaRanking={fifaRanking}
+          loading={rankingLoading}
+          currentUserId={session?.user?.id ?? null}
         />
       </div>
     );
@@ -1125,6 +1182,9 @@ const App: React.FC = () => {
             <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
               RANKING
             </a>
+            <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
+              PALPITES
+            </a>
             {isAdmin && (
               <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">
                 ADMIN
@@ -1136,52 +1196,55 @@ const App: React.FC = () => {
       </nav>
       {showIncompleteGroupsModal && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 px-4 py-8"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 px-3 py-4 sm:px-4 sm:py-8"
           role="dialog"
           aria-modal="true"
           aria-labelledby="incomplete-groups-title"
           onClick={() => setShowIncompleteGroupsModal(false)}
         >
           <section
-            className="w-full max-w-2xl overflow-hidden rounded-lg border-2 border-red-700 bg-white shadow-2xl"
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-lg border-2 border-red-700 bg-white shadow-2xl sm:max-h-[calc(100dvh-4rem)]"
             onClick={(event) => event.stopPropagation()}
           >
-            <header className="flex items-start gap-4 bg-red-700 px-5 py-5 text-white">
+            <header className="flex items-start gap-3 bg-red-700 px-4 py-3 text-white sm:gap-4 sm:px-5 sm:py-5">
               <span
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white text-xl font-black"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white text-base font-black sm:h-10 sm:w-10 sm:text-xl"
                 aria-hidden="true"
               >
                 !
               </span>
               <div className="min-w-0">
-                <h2 id="incomplete-groups-title" className="text-lg font-black">
+                <h2 id="incomplete-groups-title" className="text-sm font-black leading-tight sm:text-lg">
                   Ainda faltam placares na fase de grupos
                 </h2>
-                <p className="mt-1 text-sm font-semibold text-red-100">
+                <p className="mt-1 text-xs font-semibold leading-snug text-red-100 sm:text-sm">
                   Preencha os dois campos de gols em cada jogo antes de montar o mata-mata.
                 </p>
+                <span className="mt-2 inline-flex rounded-md bg-red-900/50 px-2 py-1 text-[10px] font-black sm:hidden">
+                  {incompleteGroupMatches.length} faltando
+                </span>
               </div>
-              <span className="ml-auto shrink-0 rounded-md bg-red-900/50 px-2.5 py-1 text-xs font-black">
+              <span className="ml-auto hidden shrink-0 rounded-md bg-red-900/50 px-2.5 py-1 text-xs font-black sm:inline-flex">
                 {incompleteGroupMatches.length} faltando
               </span>
             </header>
 
-            <div className="max-h-[55vh] overflow-y-auto px-5 py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2 sm:max-h-[55vh] sm:px-5 sm:py-4">
               <ul className="divide-y divide-red-100 border-y border-red-100">
                 {incompleteGroupMatches.map((match) => (
-                  <li key={match.id} className="grid grid-cols-[72px_1fr] gap-3 py-3 text-sm">
+                  <li key={match.id} className="grid grid-cols-[58px_1fr] gap-2 py-2 text-xs sm:grid-cols-[72px_1fr] sm:gap-3 sm:py-3 sm:text-sm">
                     <span className="font-black text-red-700">Grupo {match.group}</span>
-                    <span className="font-bold text-slate-800">{match.teamA} x {match.teamB}</span>
+                    <span className="font-bold leading-snug text-slate-800">{match.teamA} x {match.teamB}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <footer className="flex justify-end border-t border-red-100 bg-red-50 px-5 py-4">
+            <footer className="flex justify-end border-t border-red-100 bg-red-50 px-4 py-3 sm:px-5 sm:py-4">
               <button
                 type="button"
                 onClick={() => setShowIncompleteGroupsModal(false)}
-                className="rounded-lg bg-red-700 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-200"
+                className="w-full rounded-lg bg-red-700 px-4 py-2.5 text-xs font-black text-white transition-colors hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-200 sm:w-auto sm:px-5 sm:py-3 sm:text-sm"
               >
                 Voltar e preencher
               </button>
@@ -1223,6 +1286,9 @@ const App: React.FC = () => {
           </button>
           <a href="/ranking" className="prediction-mobile-tab">
             Ranking
+          </a>
+          <a href="/palpites" className="prediction-mobile-tab">
+            Palpites
           </a>
           <button
             type="button"

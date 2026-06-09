@@ -25,6 +25,7 @@ interface RankingViewProps {
   disciplineScores: DisciplineScores;
   fifaRanking: FifaRanking;
   loading: boolean;
+  currentUserId: string | null;
 }
 
 type LegendRuleKey = 'exact' | 'winnerGoals' | 'loserGoals' | 'winnerOnly' | 'drawDiff' | 'indication';
@@ -114,12 +115,16 @@ const LEGEND_RULE_ROWS: Array<{ key: LegendRuleKey; label: string }> = [
 
 const teamById = new Map<string, Team>(TEAMS_DATA.map((team) => [team.id, team]));
 
-const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, officialResults, disciplineScores, fifaRanking, loading }) => {
+const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, officialResults, disciplineScores, fifaRanking, loading, currentUserId }) => {
   const [search, setSearch] = useState('');
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [rankingPage, setRankingPage] = useState(1);
   const [detailPage, setDetailPage] = useState(1);
   const [detailPhase, setDetailPhase] = useState<DetailPhaseFilter>('all');
+  const [browseUserId, setBrowseUserId] = useState('');
+  const [browseStage, setBrowseStage] = useState<'groups' | 'knockout'>('groups');
+  const [browseGroup, setBrowseGroup] = useState('all');
+  const [compareWithMine, setCompareWithMine] = useState(false);
 
   const normalizeFlagCode = useCallback((iso2: string): string | null => {
     const normalized = iso2.toLowerCase();
@@ -185,6 +190,157 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
       })
       .sort((a, b) => b.total - a.total);
   }, [disciplineScores, fifaRanking, profiles, predictions, officialResults]);
+
+  const predictionMapsByUser = useMemo(() => {
+    const maps = new Map<string, Record<string, { a: number | null; b: number | null }>>();
+    predictions.forEach((prediction) => {
+      if (!maps.has(prediction.user_id)) maps.set(prediction.user_id, {});
+      maps.get(prediction.user_id)![prediction.match_id] = {
+        a: prediction.score_a,
+        b: prediction.score_b
+      };
+    });
+    return maps;
+  }, [predictions]);
+
+  const browseProfiles = useMemo(() => {
+    return [...profiles].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  }, [profiles]);
+
+  useEffect(() => {
+    if (!browseUserId && browseProfiles.length > 0) {
+      setBrowseUserId(browseProfiles[0].id);
+    }
+  }, [browseProfiles, browseUserId]);
+
+  const browseRows = useMemo(() => {
+    if (!browseUserId) return [];
+
+    const selectedScores = predictionMapsByUser.get(browseUserId) ?? {};
+    const myScores = currentUserId ? predictionMapsByUser.get(currentUserId) ?? {} : {};
+    const buildRows = (scores: Record<string, { a: number | null; b: number | null }>) => {
+      const groupMatches: Match[] = [];
+
+      GROUPS.forEach((group) => {
+        const teams = TEAMS_DATA.filter((team) => team.group === group);
+        for (let i = 0; i < teams.length; i += 1) {
+          for (let j = i + 1; j < teams.length; j += 1) {
+            const id = `m-${group}-${i}-${j}`;
+            const score = scores[id];
+            groupMatches.push({
+              id,
+              group,
+              teamA: teams[i].id,
+              teamB: teams[j].id,
+              scoreA: score?.a ?? null,
+              scoreB: score?.b ?? null
+            });
+          }
+        }
+      });
+
+      const placements = new Map<string, string>();
+      GROUPS.forEach((group) => {
+        const teams = TEAMS_DATA.filter((team) => team.group === group);
+        const matches = groupMatches.filter((match) => match.group === group);
+        const standings = calculateGroupStandings(teams, matches, disciplineScores, fifaRanking);
+        standings.slice(0, 3).forEach((standing, index) => placements.set(`${index + 1}${group}`, standing.teamId));
+      });
+
+      const advanced = getAdvancedTeams(GROUPS, TEAMS_DATA, groupMatches, disciplineScores, fifaRanking);
+      const thirdGroups = advanced.bestThirdPlaces.map((team) => team.group);
+      const resolvedKnockout = new Map<string, { a: Team | null; b: Team | null }>();
+
+      const resolveToken = (token: string, sourceMatchId: string, visited = new Set<string>()): Team | null => {
+        if (visited.has(token)) return null;
+        visited.add(token);
+        const direct = teamById.get(token);
+        if (direct) return direct;
+
+        if (/^[123][A-L]$/.test(token)) {
+          const teamId = placements.get(token);
+          return teamId ? teamById.get(teamId) ?? null : null;
+        }
+
+        if (token.startsWith('3rd-')) {
+          const group = getThirdPlaceGroupForMatch(sourceMatchId, thirdGroups);
+          const teamId = group ? placements.get(`3${group}`) : null;
+          return teamId ? teamById.get(teamId) ?? null : null;
+        }
+
+        const source = token.match(/^([WL])(\d{2,3})$/);
+        if (!source) return null;
+        const [, mode, sourceId] = source;
+        const matchup = resolveKnockout(sourceId, new Set(visited));
+        const score = scores[sourceId];
+        if (!matchup.a || !matchup.b || score?.a === null || score?.a === undefined || score?.b === null || score?.b === undefined || score.a === score.b) return null;
+        const winner = score.a > score.b ? matchup.a : matchup.b;
+        const loser = score.a > score.b ? matchup.b : matchup.a;
+        return mode === 'W' ? winner : loser;
+      };
+
+      const resolveKnockout = (matchId: string, visited = new Set<string>()): { a: Team | null; b: Team | null } => {
+        const cached = resolvedKnockout.get(matchId);
+        if (cached) return cached;
+        const slots = KNOCKOUT_SLOT_BY_MATCH[matchId];
+        const matchup = slots
+          ? {
+              a: resolveToken(slots.a, matchId, new Set(visited)),
+              b: resolveToken(slots.b, matchId, new Set(visited))
+            }
+          : { a: null, b: null };
+        resolvedKnockout.set(matchId, matchup);
+        return matchup;
+      };
+
+      const groupRows = groupMatches.map((match) => ({
+        id: match.id,
+        stage: 'groups' as const,
+        group: match.group,
+        label: `Grupo ${match.group}`,
+        teamA: teamById.get(match.teamA)?.name ?? match.teamA,
+        teamB: teamById.get(match.teamB)?.name ?? match.teamB,
+        score: scores[match.id]
+      }));
+
+      const knockoutRows = Object.keys(KNOCKOUT_SLOT_BY_MATCH)
+        .sort((a, b) => Number(a) - Number(b))
+        .map((id) => {
+          const matchup = resolveKnockout(id);
+          const slots = KNOCKOUT_SLOT_BY_MATCH[id];
+          return {
+            id,
+            stage: 'knockout' as const,
+            group: 'KO',
+            label: `Jogo ${id}`,
+            teamA: matchup.a?.name ?? slots.a,
+            teamB: matchup.b?.name ?? slots.b,
+            score: scores[id]
+          };
+        });
+
+      return [...groupRows, ...knockoutRows];
+    };
+
+    const selectedRows = buildRows(selectedScores);
+    const myRowsById = new Map(buildRows(myScores).map((row) => [row.id, row]));
+    return selectedRows.map((row) => {
+      const myRow = myRowsById.get(row.id);
+      return {
+        ...row,
+        myTeamA: myRow?.teamA,
+        myTeamB: myRow?.teamB,
+        myScore: myRow?.score
+      };
+    });
+  }, [browseUserId, currentUserId, disciplineScores, fifaRanking, predictionMapsByUser]);
+
+  const visibleBrowseRows = useMemo(() => {
+    return browseRows.filter((row) => {
+      if (row.stage !== browseStage) return false;
+      return browseStage !== 'groups' || browseGroup === 'all' || row.group === browseGroup;
+    });
+  }, [browseGroup, browseRows, browseStage]);
 
   const filteredSummaries = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -365,16 +521,13 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
     );
   }
 
-  if (!Object.keys(officialResults).length) {
-    return (
-      <div className="max-w-[1600px] mx-auto px-4 py-10 text-sm text-slate-500">
-        Sem resultados oficiais. Assim que o admin inserir os jogos, o ranking aparece aqui.
-      </div>
-    );
-  }
-
   return (
     <section className="ranking-wireframe max-w-[1600px] mx-auto px-4 py-8" data-testid="ranking-wireframe-layout">
+      {!Object.keys(officialResults).length && (
+        <div className="ranking-browser-locked">
+          Ainda não existem resultados oficiais. O ranking começará a pontuar após o primeiro jogo.
+        </div>
+      )}
       <header className="ranking-top-card">
         <div>
           <h2 className="ranking-title">Ranking Geral</h2>
