@@ -421,8 +421,8 @@ const App: React.FC = () => {
   }, [fetchSettings, fetchOfficialResults, fetchDisciplineScores]);
 
   useEffect(() => {
-    if (isRankingRoute || isPlayerPredictionsRoute || (isAdminRoute && isAdmin)) fetchRankingData();
-  }, [isRankingRoute, isPlayerPredictionsRoute, isAdminRoute, isAdmin, fetchRankingData]);
+    if (isRankingRoute || (isPlayerPredictionsRoute && (!!predictionsLocked || isAdmin)) || (isAdminRoute && isAdmin)) fetchRankingData();
+  }, [isRankingRoute, isPlayerPredictionsRoute, isAdminRoute, isAdmin, predictionsLocked, fetchRankingData]);
 
   const savePrediction = async (matchId: string, scoreA: number, scoreB: number) => {
     if (!session?.user?.id) return;
@@ -1068,7 +1068,9 @@ const App: React.FC = () => {
             </div>
             <div className="hidden md:flex gap-2">
               <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">VOLTAR AOS SEUS RESULTADOS</a>
-              <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">PALPITES</a>
+              {!!predictionsLocked && (
+                <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">PALPITES</a>
+              )}
               {isAdmin && (
                 <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ADMIN</a>
               )}
@@ -1092,7 +1094,9 @@ const App: React.FC = () => {
             <div className="md:hidden absolute left-0 right-0 top-full border-b border-slate-200 bg-white shadow-lg">
               <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-col gap-2">
                 <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Voltar aos seus resultados</a>
-                <a href="/palpites" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Palpites</a>
+                {!!predictionsLocked && (
+                  <a href="/palpites" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Palpites</a>
+                )}
                 {isAdmin && (
                   <a href="/admin" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Admin</a>
                 )}
@@ -1115,6 +1119,30 @@ const App: React.FC = () => {
   }
 
   if (isPlayerPredictionsRoute) {
+    if (predictionsLocked === null && !isAdmin) {
+      return (
+        <div className="min-h-screen bg-slate-50 px-4 py-16 text-center text-sm font-semibold text-slate-500">
+          Verificando disponibilidade dos palpites...
+        </div>
+      );
+    }
+
+    if (!predictionsLocked && !isAdmin) {
+      return (
+        <div className="min-h-screen bg-slate-50 px-4 py-16">
+          <section className="mx-auto max-w-xl rounded-lg border border-amber-200 bg-white p-6 shadow-sm">
+            <h1 className="text-xl font-black text-slate-900">Palpites ainda não disponíveis</h1>
+            <p className="mt-2 text-sm font-semibold text-slate-600">
+              Os palpites dos jogadores serão liberados após o encerramento do prazo.
+            </p>
+            <a href="/" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-black text-white hover:bg-indigo-700">
+              Voltar aos seus resultados
+            </a>
+          </section>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-50 pb-20">
         <nav className="sticky top-0 z-50 glass border-b border-slate-200 relative">
@@ -1182,9 +1210,11 @@ const App: React.FC = () => {
             <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
               RANKING
             </a>
-            <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
-              PALPITES
-            </a>
+            {!!predictionsLocked && (
+              <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
+                PALPITES
+              </a>
+            )}
             {isAdmin && (
               <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">
                 ADMIN
@@ -1287,9 +1317,11 @@ const App: React.FC = () => {
           <a href="/ranking" className="prediction-mobile-tab">
             Ranking
           </a>
-          <a href="/palpites" className="prediction-mobile-tab">
-            Palpites
-          </a>
+          {!!predictionsLocked && (
+            <a href="/palpites" className="prediction-mobile-tab">
+              Palpites
+            </a>
+          )}
           <button
             type="button"
             className={`prediction-mobile-tab ${view === ViewMode.OFFICIAL ? 'is-active' : ''}`}
