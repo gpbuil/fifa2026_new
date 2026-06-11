@@ -466,8 +466,17 @@
 .pv-group-blocked-standings {
   border: 1px solid var(--pv-soft-border);
   border-radius: 0.62rem;
-  overflow: hidden;
   background: #fff;
+}
+
+.pv-group-blocked-results {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pv-group-blocked-standings {
+  overflow: hidden;
 }
 
 .pv-group-results-table,
@@ -1238,6 +1247,23 @@
   .pv-group-results-table td,
   .pv-group-standings-mini-table td {
     font-size: 0.74rem;
+  }
+
+  .pv-group-results-table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .pv-group-results-table th:first-child,
+  .pv-group-results-table td:first-child {
+    min-width: 280px;
+    white-space: nowrap;
+  }
+
+  .pv-group-results-table th.is-center,
+  .pv-group-results-table td.is-center {
+    width: 76px;
+    white-space: nowrap;
   }
 
   .pv-official-head {
