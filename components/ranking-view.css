@@ -581,6 +581,25 @@
   white-space: nowrap;
 }
 
+.ranking-print-btn {
+  height: 2.35rem;
+  border: 1px solid var(--ranking-brand);
+  border-radius: 0.45rem;
+  background: var(--ranking-brand);
+  padding: 0 0.85rem;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.ranking-print-btn:hover {
+  background: #0c234b;
+}
+
+.print-book {
+  display: none;
+}
+
 .legend-table-wrap {
   overflow-x: auto;
 }
@@ -676,5 +695,221 @@
 
   .ranking-browser-segments button {
     flex: 1;
+  }
+}
+
+@page {
+  size: A4 landscape;
+  margin: 7mm;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-book,
+  .print-book * {
+    visibility: visible;
+  }
+
+  .print-book {
+    position: absolute;
+    inset: 0;
+    display: block;
+    color: #172033;
+    font-family: Arial, sans-serif;
+  }
+
+  .print-page {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 190mm;
+    break-after: page;
+    page-break-after: always;
+    overflow: hidden;
+  }
+
+  .print-page-last {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .print-header {
+    display: grid;
+    grid-template-columns: 17mm 1fr auto;
+    align-items: center;
+    gap: 4mm;
+    min-height: 18mm;
+    margin-bottom: 3mm;
+    border-bottom: 1.2mm solid #142a54;
+    padding-bottom: 2.5mm;
+  }
+
+  .print-header img {
+    width: 15mm;
+    height: 15mm;
+    object-fit: contain;
+  }
+
+  .print-header h1 {
+    margin: 0.5mm 0 0;
+    color: #142a54;
+    font-size: 16pt;
+    line-height: 1;
+  }
+
+  .print-header p,
+  .print-kicker {
+    margin: 0;
+    color: #657188;
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .print-page-number {
+    border: 0.4mm solid #cbd3df;
+    padding: 1.5mm 2mm;
+    color: #142a54;
+    font-size: 7pt;
+    font-weight: 800;
+  }
+
+  .print-groups-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2mm;
+  }
+
+  .print-group {
+    break-inside: avoid;
+    border: 0.3mm solid #cfd6e1;
+  }
+
+  .print-group h2,
+  .print-round h2,
+  .print-thirds h2 {
+    margin: 0;
+    background: #142a54;
+    padding: 1.2mm 1.7mm;
+    color: #fff;
+    font-size: 7pt;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .print-match {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 13mm minmax(0, 1fr);
+    align-items: center;
+    gap: 1mm;
+    min-height: 5.1mm;
+    border-top: 0.2mm solid #e2e6ed;
+    padding: 0.6mm 1.2mm;
+    font-size: 5.8pt;
+  }
+
+  .print-match strong,
+  .print-ko-match strong {
+    text-align: center;
+    color: #142a54;
+    font-size: 6.5pt;
+    white-space: nowrap;
+  }
+
+  .print-team {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 1mm;
+    font-weight: 700;
+  }
+
+  .print-team img {
+    width: 4mm;
+    height: 2.8mm;
+    flex: 0 0 auto;
+    border: 0.2mm solid #d5dae3;
+    object-fit: cover;
+  }
+
+  .print-team span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .print-thirds {
+    margin-top: 3mm;
+    border: 0.3mm solid #cfd6e1;
+  }
+
+  .print-thirds h2 {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .print-thirds h2 span {
+    color: #b8caeb;
+    font-size: 5.5pt;
+  }
+
+  .print-thirds-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .print-thirds-grid > div {
+    display: grid;
+    grid-template-columns: 5mm minmax(0, 1fr) 7mm 11mm 17mm;
+    align-items: center;
+    gap: 1mm;
+    border-right: 0.2mm solid #e2e6ed;
+    border-bottom: 0.2mm solid #e2e6ed;
+    padding: 1mm 1.4mm;
+    font-size: 5.8pt;
+  }
+
+  .print-thirds-grid > div.is-qualified {
+    background: #eef7f1;
+  }
+
+  .print-thirds-grid small {
+    color: #657188;
+    font-size: 5pt;
+  }
+
+  .print-knockout-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    align-items: start;
+    gap: 2.5mm;
+  }
+
+  .print-round {
+    break-inside: avoid;
+    border: 0.3mm solid #cfd6e1;
+  }
+
+  .print-ko-match {
+    display: grid;
+    grid-template-columns: 6mm minmax(0, 1fr) 13mm minmax(0, 1fr);
+    align-items: center;
+    gap: 1mm;
+    min-height: 8mm;
+    border-top: 0.2mm solid #e2e6ed;
+    padding: 1mm 1.2mm;
+    font-size: 5.8pt;
+  }
+
+  .print-ko-id {
+    color: #657188;
+    font-size: 5.5pt;
+    font-weight: 800;
   }
 }
