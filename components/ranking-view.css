@@ -596,6 +596,16 @@
   background: #0c234b;
 }
 
+.ranking-print-btn-all {
+  border-color: #b45309;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.ranking-print-btn-all:hover {
+  background: #ffedd5;
+}
+
 .print-book {
   display: none;
 }
