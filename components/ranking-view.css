@@ -612,6 +612,7 @@
 
 .legend-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .legend-matrix {
@@ -640,9 +641,6 @@
 .legend-matrix thead th:first-child {
   text-align: left;
   min-width: 210px;
-  position: sticky;
-  left: 0;
-  z-index: 1;
   background: #f7f9fc;
 }
 
@@ -678,6 +676,29 @@
 
   .ranking-panel-meta {
     display: none;
+  }
+
+  .ranking-panel-list {
+    min-width: 0;
+  }
+
+  .ranking-table-head,
+  .ranking-list-row {
+    grid-template-columns: minmax(0, 1fr) 58px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ranking-table-head {
+    padding-inline: 0.44rem;
+  }
+
+  .ranking-user-name {
+    font-size: 0.84rem;
+  }
+
+  .ranking-user-points {
+    font-size: 1rem;
   }
 
   .ranking-pagination {
