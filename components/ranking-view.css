@@ -149,7 +149,7 @@
 
 .ranking-table-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 70px;
+  grid-template-columns: 42px minmax(0, 1fr) 70px;
   padding: 0.4rem 0.52rem;
   border-radius: 0.58rem;
   background: rgba(20, 42, 84, 0.08);
@@ -173,7 +173,7 @@
   border-radius: 0.58rem;
   padding: 0.35rem 0.48rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 70px;
+  grid-template-columns: 42px minmax(0, 1fr) 70px;
   align-items: center;
   text-align: left;
   cursor: pointer;
@@ -188,6 +188,14 @@
 .ranking-list-row.is-active {
   border-color: rgba(20, 42, 84, 0.55);
   box-shadow: 0 8px 16px -14px rgba(15, 23, 42, 0.7);
+}
+
+.ranking-user-position {
+  justify-self: start;
+  color: var(--ranking-accent);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.02rem;
+  font-weight: 800;
 }
 
 .ranking-user-name {
@@ -660,7 +668,7 @@
 
   .ranking-table-head,
   .ranking-list-row {
-    grid-template-columns: minmax(0, 1fr) 58px;
+    grid-template-columns: 34px minmax(0, 1fr) 58px;
     width: 100%;
     box-sizing: border-box;
   }

@@ -179,7 +179,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
       grouped[prediction.user_id].push(prediction);
     });
 
-    return profiles
+    const sortedSummaries = profiles
       .map((profile) => {
         const userPredictions = grouped[profile.id] ?? [];
         const predictionMap: Record<string, { a: number | null; b: number | null }> = {};
@@ -188,7 +188,18 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
         });
         return buildUserScoreSummary(profile.id, profile.full_name || 'Sem nome', predictionMap, officialResults, disciplineScores, fifaRanking);
       })
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+    let currentPosition = 0;
+    let previousTotal: number | null = null;
+
+    return sortedSummaries.map((summary, index) => {
+      if (previousTotal === null || summary.total !== previousTotal) {
+        currentPosition = index + 1;
+        previousTotal = summary.total;
+      }
+      return { ...summary, position: currentPosition };
+    });
   }, [disciplineScores, fifaRanking, profiles, predictions, officialResults]);
 
   const predictionMapsByUser = useMemo(() => {
@@ -560,6 +571,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
           </div>
 
           <div className="ranking-table-head">
+            <span>#</span>
             <span>Nome</span>
             <span>PTS</span>
           </div>
@@ -573,6 +585,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
                 onClick={() => setActiveUserId(row.userId)}
                 className={`ranking-list-row ${activeUserId === row.userId ? 'is-active' : ''}`}
               >
+                <span className="ranking-user-position">{row.position}o</span>
                 <span className="ranking-user-name">{row.name}</span>
                 <span className="ranking-user-points">{row.total}</span>
               </button>
