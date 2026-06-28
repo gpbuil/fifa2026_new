@@ -1093,13 +1093,16 @@
 .pv-ko-compare-grid {
   border: 1px solid var(--pv-soft-border);
   border-radius: 0.52rem;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pv-ko-compare-head,
 .pv-ko-compare-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px 72px;
+  grid-template-columns: minmax(104px, 1fr) minmax(104px, 1fr) 58px 58px;
+  min-width: 360px;
   align-items: center;
   gap: 0.2rem;
 }

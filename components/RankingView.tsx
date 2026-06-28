@@ -700,7 +700,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
                           </span>
                         </td>
                         <td className="detail-center-col">
-                          {match.official.a} x {match.official.b}
+                          {match.official.a !== null && match.official.b !== null ? `${match.official.a} x ${match.official.b}` : '-'}
                         </td>
                         <td className="detail-center-col">
                           {match.predicted?.a ?? '-'} x {match.predicted?.b ?? '-'}

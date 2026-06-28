@@ -1678,6 +1678,7 @@ const App: React.FC = () => {
             knockoutMatches={knockoutMatches}
             onScoreChange={handleScoreChange}
             resolvePlaceholder={resolvePlaceholder}
+            resolveOfficialPlaceholder={resolveOfficialPlaceholder}
             predictionsLocked={!!predictionsLocked}
             officialScores={officialResults}
           />

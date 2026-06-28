@@ -329,6 +329,19 @@ const emptyPhaseTotals = (): Record<PhaseKey, number> => ({
   final: 0
 });
 
+const countCorrectIndicatedTeams = (
+  officialA: Team | null,
+  officialB: Team | null,
+  userA: Team | null,
+  userB: Team | null
+): number => {
+  if (!officialA || !officialB || !userA || !userB) return 0;
+  let count = 0;
+  if (officialA.id === userA.id) count += 1;
+  if (officialB.id === userB.id) count += 1;
+  return count;
+};
+
 export const buildUserScoreSummary = (
   userId: string,
   name: string,
@@ -358,7 +371,7 @@ export const buildUserScoreSummary = (
   GROUPS.forEach(group => {
     const groupTeams = TEAMS_DATA.filter(t => t.group === group);
     const groupMatches = userGroupMatches.filter(m => m.group === group);
-    const standings = calculateGroupStandings(groupTeams, groupMatches);
+    const standings = calculateGroupStandings(groupTeams, groupMatches, disciplineScores, fifaRanking);
     const hasAnyMatch = groupMatches.some(m => m.scoreA !== null && m.scoreA !== undefined);
     if (!hasAnyMatch) return;
     const top3 = standings.slice(0, 3).map(s => s.teamId);
@@ -366,15 +379,17 @@ export const buildUserScoreSummary = (
     if (top3[1]) userPlacements.set(`2${group}`, top3[1]);
     if (top3[2]) userPlacements.set(`3${group}`, top3[2]);
   });
-  const userAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, userGroupMatches);
+  const userAdvanced = getAdvancedTeams(GROUPS, TEAMS_DATA, userGroupMatches, disciplineScores, fifaRanking);
   const userKnockoutMatches = buildKnockoutMatches(predictionMap);
 
   const byPhase = emptyPhaseTotals();
   const byRule: Record<string, number> = {};
   const perMatch: MatchScoreDetail[] = [];
+  const scoredMatchIds = new Set<string>();
 
   Object.entries(officialMap).forEach(([matchId, officialScore]) => {
     if (officialScore.a === null || officialScore.b === null) return;
+    scoredMatchIds.add(matchId);
     const phase = getPhaseForMatch(matchId);
     const predictedScore = predictionMap[matchId] ?? null;
     const result = scoreResult(phase, predictedScore, officialScore);
@@ -390,8 +405,7 @@ export const buildUserScoreSummary = (
           const officialB = resolveTeam(officialMatch.teamB, officialPlacements, officialAdvanced.bestThirdPlaces, officialKnockoutMatches, officialMap, matchId);
           const userA = resolveTeam(userMatch.teamA, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap, matchId);
           const userB = resolveTeam(userMatch.teamB, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap, matchId);
-          if (officialA && userA && officialA.id === userA.id) indicationPoints += indicatorValue;
-          if (officialB && userB && officialB.id === userB.id) indicationPoints += indicatorValue;
+          indicationPoints += countCorrectIndicatedTeams(officialA, officialB, userA, userB) * indicatorValue;
         }
       }
     }
@@ -413,6 +427,40 @@ export const buildUserScoreSummary = (
       resultPoints: result.points,
       indicationPoints,
       totalPoints
+    });
+  });
+
+  officialKnockoutMatches.forEach((officialMatch) => {
+    if (scoredMatchIds.has(officialMatch.id)) return;
+
+    const phase = getPhaseForMatch(officialMatch.id);
+    const indicatorValue = INDICATION_POINTS[phase] ?? 0;
+    if (indicatorValue <= 0) return;
+
+    const userMatch = userKnockoutMatches.find(m => m.id === officialMatch.id);
+    if (!userMatch) return;
+
+    const officialA = resolveTeam(officialMatch.teamA, officialPlacements, officialAdvanced.bestThirdPlaces, officialKnockoutMatches, officialMap, officialMatch.id);
+    const officialB = resolveTeam(officialMatch.teamB, officialPlacements, officialAdvanced.bestThirdPlaces, officialKnockoutMatches, officialMap, officialMatch.id);
+    const userA = resolveTeam(userMatch.teamA, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap, officialMatch.id);
+    const userB = resolveTeam(userMatch.teamB, userPlacements, userAdvanced.bestThirdPlaces, userKnockoutMatches, predictionMap, officialMatch.id);
+
+    const indicationPoints = countCorrectIndicatedTeams(officialA, officialB, userA, userB) * indicatorValue;
+    if (indicationPoints <= 0) return;
+
+    byPhase[phase] += indicationPoints;
+    byRule['Indicação correta / por país'] = (byRule['Indicação correta / por país'] ?? 0) + indicationPoints;
+
+    perMatch.push({
+      matchId: officialMatch.id,
+      phase,
+      phaseLabel: PHASE_LABEL[phase],
+      predicted: predictionMap[officialMatch.id] ?? null,
+      official: officialMap[officialMatch.id] ?? { a: null, b: null },
+      ruleApplied: 'Aguardando resultado',
+      resultPoints: 0,
+      indicationPoints,
+      totalPoints: indicationPoints
     });
   });
 

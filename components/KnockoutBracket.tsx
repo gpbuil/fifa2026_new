@@ -6,6 +6,7 @@ interface KnockoutBracketProps {
   knockoutMatches: Match[];
   onScoreChange: (matchId: string, team: 'A' | 'B', value: string) => void;
   resolvePlaceholder: (id: string, matchId?: string) => { team?: Team; label: string };
+  resolveOfficialPlaceholder?: (id: string, matchId?: string) => { team?: Team; label: string };
   predictionsLocked?: boolean;
   officialScores?: Record<string, { a: number | null; b: number | null }>;
 }
@@ -69,26 +70,36 @@ const TeamLine: React.FC<{
 const ComparisonTeamRow: React.FC<{
   teamId: string;
   matchId: string;
+  officialTeamId: string;
   officialScore: number | null | undefined;
   predictedScore: number | null | undefined;
   resolve: (id: string, matchId?: string) => { team?: Team; label: string };
-}> = ({ teamId, matchId, officialScore, predictedScore, resolve }) => {
+  resolveOfficial: (id: string, matchId?: string) => { team?: Team; label: string };
+}> = ({ teamId, matchId, officialTeamId, officialScore, predictedScore, resolve, resolveOfficial }) => {
   const { team, label } = resolve(teamId, matchId);
+  const official = resolveOfficial(officialTeamId, matchId);
+
+  const renderTeam = (resolvedTeam: Team | undefined, resolvedLabel: string) => (
+    resolvedTeam ? (
+      <>
+        <FlagImage iso2={resolvedTeam.iso2} name={resolvedTeam.name} />
+        <span className="pv-team-name">{resolvedTeam.name}</span>
+      </>
+    ) : (
+      <>
+        <span className="pv-placeholder-slot">?</span>
+        <span className="pv-placeholder-label">{resolvedLabel}</span>
+      </>
+    )
+  );
 
   return (
     <div className="pv-ko-compare-row" data-testid="ko-compare-row">
       <div className="pv-ko-compare-team">
-        {team ? (
-          <>
-            <FlagImage iso2={team.iso2} name={team.name} />
-            <span className="pv-team-name">{team.name}</span>
-          </>
-        ) : (
-          <>
-            <span className="pv-placeholder-slot">?</span>
-            <span className="pv-placeholder-label">{label}</span>
-          </>
-        )}
+        {renderTeam(team, label)}
+      </div>
+      <div className="pv-ko-compare-team">
+        {renderTeam(official.team, official.label)}
       </div>
       <div className="pv-ko-compare-cell is-center" data-testid="ko-compare-official">
         {officialScore ?? '-'}
@@ -104,9 +115,12 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
   knockoutMatches,
   onScoreChange,
   resolvePlaceholder,
+  resolveOfficialPlaceholder,
   predictionsLocked = false,
   officialScores
 }) => {
+  const resolveOfficial = resolveOfficialPlaceholder ?? resolvePlaceholder;
+
   const rounds = [
     { title: 'Rodada de 32', id: 'R32', matches: knockoutMatches.filter((match) => parseInt(match.id, 10) >= 73 && parseInt(match.id, 10) <= 88) },
     { title: 'Rodada de 16', id: 'R16', matches: knockoutMatches.filter((match) => parseInt(match.id, 10) >= 89 && parseInt(match.id, 10) <= 96) },
@@ -144,23 +158,28 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                     {predictionsLocked ? (
                       <div className="pv-ko-compare-grid">
                         <div className="pv-ko-compare-head">
-                          <span>Time</span>
+                          <span>Seu confronto</span>
+                          <span>Confronto real</span>
                           <span className="is-center">Res.Ofic</span>
                           <span className="is-center">Palpite</span>
                         </div>
                         <ComparisonTeamRow
                           teamId={match.teamA}
+                          officialTeamId={match.teamA}
                           matchId={match.id}
                           officialScore={official?.a}
                           predictedScore={match.scoreA}
                           resolve={resolvePlaceholder}
+                          resolveOfficial={resolveOfficial}
                         />
                         <ComparisonTeamRow
                           teamId={match.teamB}
+                          officialTeamId={match.teamB}
                           matchId={match.id}
                           officialScore={official?.b}
                           predictedScore={match.scoreB}
                           resolve={resolvePlaceholder}
+                          resolveOfficial={resolveOfficial}
                         />
                       </div>
                     ) : (
