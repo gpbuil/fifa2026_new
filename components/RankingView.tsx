@@ -115,6 +115,21 @@ const LEGEND_RULE_ROWS: Array<{ key: LegendRuleKey; label: string }> = [
 
 const teamById = new Map<string, Team>(TEAMS_DATA.map((team) => [team.id, team]));
 
+const normalizePlayerName = (name: string | null | undefined): string => {
+  const cleaned = (name || '').trim().replace(/\s+/g, ' ');
+  if (!cleaned) return 'Sem nome';
+
+  const lowercaseWords = new Set(['da', 'das', 'de', 'do', 'dos', 'e']);
+  return cleaned
+    .toLocaleLowerCase('pt-BR')
+    .split(' ')
+    .map((word, index) => {
+      if (index > 0 && lowercaseWords.has(word)) return word;
+      return word.charAt(0).toLocaleUpperCase('pt-BR') + word.slice(1);
+    })
+    .join(' ');
+};
+
 const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, officialResults, disciplineScores, fifaRanking, loading, currentUserId }) => {
   const [search, setSearch] = useState('');
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
@@ -186,7 +201,7 @@ const RankingView: React.FC<RankingViewProps> = ({ profiles, predictions, offici
         userPredictions.forEach((prediction) => {
           predictionMap[prediction.match_id] = { a: prediction.score_a, b: prediction.score_b };
         });
-        return buildUserScoreSummary(profile.id, profile.full_name || 'Sem nome', predictionMap, officialResults, disciplineScores, fifaRanking);
+        return buildUserScoreSummary(profile.id, normalizePlayerName(profile.full_name), predictionMap, officialResults, disciplineScores, fifaRanking);
       })
       .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
