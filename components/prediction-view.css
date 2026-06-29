@@ -1013,7 +1013,7 @@
 
 .pv-ko-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(390px, 1fr));
+  grid-template-columns: repeat(5, minmax(450px, 1fr));
   gap: 0.65rem;
   overflow-x: auto;
   overflow-y: hidden;
@@ -1023,7 +1023,7 @@
 
 .pv-round-panel {
   padding: 0.56rem;
-  min-width: 390px;
+  min-width: 450px;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -1104,7 +1104,7 @@
   border: 1px solid var(--pv-soft-border);
   border-radius: 0.52rem;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
 }
@@ -1112,8 +1112,8 @@
 .pv-ko-compare-head,
 .pv-ko-compare-row {
   display: grid;
-  grid-template-columns: minmax(104px, 1fr) minmax(104px, 1fr) 58px 58px;
-  min-width: 360px;
+  grid-template-columns: minmax(128px, 1fr) minmax(128px, 1fr) 58px 58px;
+  min-width: 100%;
   box-sizing: border-box;
   align-items: center;
   gap: 0.2rem;
@@ -1253,6 +1253,20 @@
 
   .pv-ko-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pv-round-panel {
+    min-width: 0;
+  }
+
+  .pv-ko-compare-grid {
+    overflow-x: auto;
+  }
+
+  .pv-ko-compare-head,
+  .pv-ko-compare-row {
+    grid-template-columns: minmax(104px, 1fr) minmax(104px, 1fr) 58px 58px;
+    min-width: 360px;
   }
 
   .pv-group-blocked-body {
