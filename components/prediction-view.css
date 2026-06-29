@@ -1013,12 +1013,19 @@
 
 .pv-ko-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(390px, 1fr));
   gap: 0.65rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.35rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pv-round-panel {
   padding: 0.56rem;
+  min-width: 390px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .pv-round-head {
@@ -1045,6 +1052,9 @@
   border-radius: 0.58rem;
   background: #fff;
   padding: 0.38rem;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .pv-ko-match.is-final {
@@ -1093,6 +1103,7 @@
 .pv-ko-compare-grid {
   border: 1px solid var(--pv-soft-border);
   border-radius: 0.52rem;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -1103,6 +1114,7 @@
   display: grid;
   grid-template-columns: minmax(104px, 1fr) minmax(104px, 1fr) 58px 58px;
   min-width: 360px;
+  box-sizing: border-box;
   align-items: center;
   gap: 0.2rem;
 }
