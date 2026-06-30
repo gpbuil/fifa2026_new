@@ -11,6 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import RankingView from './components/RankingView';
 import PlayerPredictionsView from './components/PlayerPredictionsView';
 import StatisticsView from './components/StatisticsView';
+import SimulationView from './components/SimulationView';
 import { getAdvancedTeams, calculateGroupStandings } from './services/simulator';
 import { getThirdPlaceGroupForMatch } from './data/thirdPlaceMatrix';
 import './components/prediction-view.css';
@@ -57,6 +58,7 @@ const App: React.FC = () => {
   const isRankingRoute = pathname.startsWith('/ranking');
   const isPlayerPredictionsRoute = pathname.startsWith('/palpites');
   const isStatisticsRoute = pathname.startsWith('/estatisticas');
+  const isSimulationRoute = pathname.startsWith('/simulador');
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -423,8 +425,8 @@ const App: React.FC = () => {
   }, [fetchSettings, fetchOfficialResults, fetchDisciplineScores]);
 
   useEffect(() => {
-    if (isRankingRoute || (isStatisticsRoute && (!!predictionsLocked || isAdmin)) || (isPlayerPredictionsRoute && (!!predictionsLocked || isAdmin)) || (isAdminRoute && isAdmin)) fetchRankingData();
-  }, [isRankingRoute, isStatisticsRoute, isPlayerPredictionsRoute, isAdminRoute, isAdmin, predictionsLocked, fetchRankingData]);
+    if (isRankingRoute || (isSimulationRoute && (!!predictionsLocked || isAdmin)) || (isStatisticsRoute && (!!predictionsLocked || isAdmin)) || (isPlayerPredictionsRoute && (!!predictionsLocked || isAdmin)) || (isAdminRoute && isAdmin)) fetchRankingData();
+  }, [isRankingRoute, isSimulationRoute, isStatisticsRoute, isPlayerPredictionsRoute, isAdminRoute, isAdmin, predictionsLocked, fetchRankingData]);
 
   const savePrediction = async (matchId: string, scoreA: number, scoreB: number) => {
     if (!session?.user?.id) return;
@@ -1059,6 +1061,94 @@ const App: React.FC = () => {
     );
   }
 
+  if (isSimulationRoute) {
+    if (predictionsLocked === null && !isAdmin) {
+      return (
+        <div className="min-h-screen bg-slate-50 px-4 py-16 text-center text-sm font-semibold text-slate-500">
+          Verificando disponibilidade do simulador...
+        </div>
+      );
+    }
+
+    if (!predictionsLocked && !isAdmin) {
+      return (
+        <div className="min-h-screen bg-slate-50 px-4 py-16">
+          <section className="mx-auto max-w-xl rounded-lg border border-amber-200 bg-white p-6 shadow-sm">
+            <h1 className="text-xl font-black text-slate-900">Simulador ainda nao disponivel</h1>
+            <p className="mt-2 text-sm font-semibold text-slate-600">
+              O simulador sera liberado apos o encerramento do prazo de palpites.
+            </p>
+            <a href="/" className="mt-5 inline-flex rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-black text-white hover:bg-indigo-700">
+              Voltar aos seus resultados
+            </a>
+          </section>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-50 pb-20">
+        <nav className="sticky top-0 z-50 glass border-b border-slate-200 relative">
+          <div className="max-w-[1600px] mx-auto px-4 h-20 md:h-24 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <img src="/logobolao.png" alt="Bolao" className="h-14 w-14 md:h-20 md:w-20 object-contain" />
+              <span className="truncate font-black text-sm md:text-lg text-indigo-900 leading-none tracking-tighter">BOLAO DA COPA DO MANDUCA</span>
+            </div>
+            <div className="hidden md:flex gap-2">
+              <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">SEUS RESULTADOS</a>
+              <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">RANKING</a>
+              <a href="/estatisticas" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">ESTATISTICAS</a>
+              {!!predictionsLocked && (
+                <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">PALPITES</a>
+              )}
+              {isAdmin && (
+                <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ADMIN</a>
+              )}
+              <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
+            </div>
+            <button
+              type="button"
+              className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Abrir menu"
+            >
+              <span className="flex flex-col gap-1.5">
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+                <span className="block h-0.5 w-5 bg-current" />
+              </span>
+            </button>
+          </div>
+          {mobileMenuOpen && (
+            <div className="md:hidden absolute left-0 right-0 top-full border-b border-slate-200 bg-white shadow-lg">
+              <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-col gap-2">
+                <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Seus resultados</a>
+                <a href="/ranking" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Ranking</a>
+                <a href="/estatisticas" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Estatisticas</a>
+                {!!predictionsLocked && (
+                  <a href="/palpites" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Palpites</a>
+                )}
+                {isAdmin && (
+                  <a href="/admin" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Admin</a>
+                )}
+                <button onClick={() => supabase.auth.signOut()} className="rounded-xl px-4 py-3 text-left text-sm font-black text-red-600 hover:bg-red-50">Sair</button>
+              </div>
+            </div>
+          )}
+        </nav>
+        <SimulationView
+          profiles={profiles}
+          predictions={allPredictions}
+          officialResults={officialResults}
+          disciplineScores={disciplineScores}
+          fifaRanking={fifaRanking}
+          loading={rankingLoading}
+        />
+      </div>
+    );
+  }
+
   if (isStatisticsRoute) {
     if (predictionsLocked === null && !isAdmin) {
       return (
@@ -1098,6 +1188,7 @@ const App: React.FC = () => {
               {!!predictionsLocked && (
                 <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">PALPITES</a>
               )}
+              <a href="/simulador" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">SIMULADOR</a>
               {isAdmin && (
                 <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ADMIN</a>
               )}
@@ -1125,6 +1216,7 @@ const App: React.FC = () => {
                 {!!predictionsLocked && (
                   <a href="/palpites" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Palpites</a>
                 )}
+                <a href="/simulador" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Simulador</a>
                 {isAdmin && (
                   <a href="/admin" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Admin</a>
                 )}
@@ -1159,6 +1251,9 @@ const App: React.FC = () => {
               {(!!predictionsLocked || isAdmin) && (
                 <a href="/estatisticas" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">ESTATISTICAS</a>
               )}
+              {(!!predictionsLocked || isAdmin) && (
+                <a href="/simulador" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">SIMULADOR</a>
+              )}
               {!!predictionsLocked && (
                 <a href="/palpites" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-indigo-600 hover:bg-indigo-50">PALPITES</a>
               )}
@@ -1187,6 +1282,9 @@ const App: React.FC = () => {
                 <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Voltar aos seus resultados</a>
                 {(!!predictionsLocked || isAdmin) && (
                   <a href="/estatisticas" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Estatisticas</a>
+                )}
+                {(!!predictionsLocked || isAdmin) && (
+                  <a href="/simulador" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Simulador</a>
                 )}
                 {!!predictionsLocked && (
                   <a href="/palpites" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Palpites</a>
@@ -1249,6 +1347,7 @@ const App: React.FC = () => {
               <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-100">SEUS RESULTADOS</a>
               <a href="/ranking" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-100">RANKING</a>
               <a href="/estatisticas" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-100">ESTATISTICAS</a>
+              <a href="/simulador" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-100">SIMULADOR</a>
               {isAdmin && <a href="/admin" className="px-4 py-2 rounded-xl text-xs font-bold text-indigo-600 hover:bg-indigo-50">ADMIN</a>}
               <button onClick={() => supabase.auth.signOut()} className="text-slate-400 hover:text-red-500 text-xs font-bold">Sair</button>
             </div>
@@ -1272,6 +1371,7 @@ const App: React.FC = () => {
                 <a href="/" className="rounded-xl px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Seus resultados</a>
                 <a href="/ranking" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Ranking</a>
                 <a href="/estatisticas" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Estatisticas</a>
+                <a href="/simulador" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Simulador</a>
                 {isAdmin && <a href="/admin" className="rounded-xl px-4 py-3 text-sm font-black text-indigo-700 hover:bg-indigo-50">Admin</a>}
                 <button onClick={() => supabase.auth.signOut()} className="rounded-xl px-4 py-3 text-left text-sm font-black text-red-600 hover:bg-red-50">Sair</button>
               </div>
@@ -1309,6 +1409,11 @@ const App: React.FC = () => {
             {!!predictionsLocked && (
               <a href="/estatisticas" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
                 ESTATISTICAS
+              </a>
+            )}
+            {!!predictionsLocked && (
+              <a href="/simulador" className="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:bg-slate-100">
+                SIMULADOR
               </a>
             )}
             {!!predictionsLocked && (
@@ -1421,6 +1526,11 @@ const App: React.FC = () => {
           {!!predictionsLocked && (
             <a href="/estatisticas" className="prediction-mobile-tab">
               Estatisticas
+            </a>
+          )}
+          {!!predictionsLocked && (
+            <a href="/simulador" className="prediction-mobile-tab">
+              Simulador
             </a>
           )}
           {!!predictionsLocked && (
